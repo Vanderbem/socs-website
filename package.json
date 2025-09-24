@@ -1,0 +1,37 @@
+{
+  "name": "socs_website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@clerk/elements": "^0.23.58",
+    "@clerk/nextjs": "^6.31.3",
+    "@clerk/themes": "^2.4.12",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@vercel/postgres": "^0.10.0",
+    "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.5",
+    "googleapis": "^158.0.0",
+    "next": "^14.2.31",
+    "postcss": "^8.5.6",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwindcss": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.9",
+    "@types/react": "18.3.23",
+    "@types/react-dom": "^18",
+    "drizzle-kit": "^0.31.4",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.30",
+    "pg": "^8.16.3",
+    "typescript": "^5"
+  }
+}
