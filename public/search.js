@@ -106,7 +106,7 @@ function renderLessons(lessonsToRender) {
   if (!container) return
   
   if (lessonsToRender.length === 0) {
-    container.innerHTML = '<li class="no-results">No lessons found</li>'
+    container.innerHTML = '<li class="no-results">No ho ho lessons found</li>'
     return
   }
   

@@ -40,3 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 socs4all-e896217ba3d5.json
+.env*.local
