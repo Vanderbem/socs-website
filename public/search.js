@@ -106,14 +106,14 @@ function renderLessons(lessonsToRender) {
   if (!container) return
   
   if (lessonsToRender.length === 0) {
-    container.innerHTML = '<li class="no-results">No lessons found</li>'
+    container.innerHTML = '<ul class="no-results">TEST No lessons found TEST</ul>'
     return
   }
   
   container.innerHTML = lessonsToRender.map(lesson => {
     const highlightedTitle = highlightText(lesson.lessonTitle);
     return `
-    <li class="ais-Hits-item">
+    <ul class="ais-Hits-item">
       <div class="hit">
         <div class="hit-content">
           <div class="hit-header">
@@ -142,7 +142,7 @@ function renderLessons(lessonsToRender) {
           </div>
         </div>
       </div>
-    </li>
+    </ul>
   `}).join('')
 }
 
