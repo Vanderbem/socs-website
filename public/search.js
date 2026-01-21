@@ -6,7 +6,8 @@ const searchState = {
     filters: {
         grade: [],
         subject: [],
-        ctConcept: []
+      ctConcept: [],
+      hasSpanish: false
     },
     sortBy: 'lessonTitle',
     sortOrder: 'asc'
@@ -67,6 +68,11 @@ function searchAndRender() {
             );
         }
     });
+    
+    // 2b. Apply Has Spanish boolean filter (checked => only show lessons with spanish)
+    if (searchState.filters.hasSpanish) {
+      filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
+    }
   
     // 3. Apply Sorting
     const sortKey = searchState.sortBy;
@@ -106,7 +112,7 @@ function renderLessons(lessonsToRender) {
   if (!container) return
   
   if (lessonsToRender.length === 0) {
-    container.innerHTML = '<ul class="no-results">TEST No lessons found TEST</ul>'
+    container.innerHTML = '<ul class="no-results">No lessons found</ul>'
     return
   }
   
@@ -156,7 +162,7 @@ function highlightText(text) {
 }
 
 function updateAllFacets() {
-    const facets = ['grade', 'subject', 'ctConcept'];
+    const facets = ['grade', 'subject', 'ctConcept', 'hasSpanish'];
     facets.forEach(facetToUpdate => {
         let tempFilteredLessons = [...allLessons];
 
@@ -177,6 +183,17 @@ function updateAllFacets() {
                 );
             }
         });
+
+        // Special handling for boolean Has Spanish facet
+        if (facetToUpdate === 'hasSpanish') {
+          const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
+          const container = document.getElementById('spanish-facet');
+          if (container) {
+            const isChecked = !!searchState.filters.hasSpanish;
+            container.innerHTML = `\n          <li>\n            <label>\n              <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>\n              <span class="facet-value">Has Spanish</span>\n              <span class="facet-count">${count}</span>\n            </label>\n          </li>\n        `;
+          }
+          return; // move to next facet
+        }
 
         // Now, get the counts for the facet we are currently updating
         const counts = getCountsForFacet(tempFilteredLessons, facetToUpdate);
@@ -251,6 +268,9 @@ function clearFilters() {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
 
+  // Reset our hasSpanish flag in state
+  searchState.filters.hasSpanish = false;
+
     // Reset state and re-render
     searchAndRender();
 }
@@ -262,6 +282,7 @@ function updateStateFromDOM() {
     searchState.filters.grade = Array.from(document.querySelectorAll('#grade-facet input:checked')).map(cb => cb.value);
     searchState.filters.subject = Array.from(document.querySelectorAll('#subject-facet input:checked')).map(cb => cb.value);
     searchState.filters.ctConcept = Array.from(document.querySelectorAll('#concept-facet input:checked')).map(cb => cb.value);
+    searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked);
 
     const sortSelect = document.getElementById('sort-select');
     searchState.sortBy = sortSelect ? sortSelect.value : 'lessonTitle';

@@ -51,6 +51,8 @@ export async function GET() {
         subject: values[headers.indexOf('Subject')] || '',
         originalAuthor: values[headers.indexOf('Original Author')] || '',
         originalFolderLink: values[headers.indexOf('Original Folder Link')] || ''
+      ,
+      	hasSpanish: ((values[headers.indexOf('Has Spanish')] || '').toLowerCase() === 'yes' || (values[headers.indexOf('Has Spanish')] || '').toLowerCase() === 'true')
       }
       
       if (lesson.lessonTitle || lesson.id) {

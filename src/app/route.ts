@@ -180,6 +180,18 @@ export async function GET() {
           <ul class="facet-values" id="concept-facet"></ul>
         </div>
         
+        <div class="facet">
+          <div class="facet-name">Has Spanish</div>
+          <ul class="facet-values" id="spanish-facet">
+            <li>
+              <label>
+                <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox">
+                <span class="facet-value">Has Spanish</span>
+              </label>
+            </li>
+          </ul>
+        </div>
+        
         
         <button class="clear-filters" id="clear-filters-btn">
           Clear all filters
