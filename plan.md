@@ -461,7 +461,7 @@ export async function GET() {
           dateFinalized: getValue(values, headers, 'Date Finalized') || '',
           revisedBy: getValue(values, headers, 'Revised by') || '',
           readyToPublish: getValue(values, headers, 'Ready to publish to webpage')?.toUpperCase() === 'TRUE',
-          linkToFolder: getValue(values, headers, 'Link to folder with updated lesson plan and materials') || '',
+          linkToFolder: getValue(values, headers, 'Link to English Plan') || '',
           notes: getValue(values, headers, 'Notes') || '',
           lessonTitle: getValue(values, headers, 'Lesson Title') || 'Untitled Lesson',
           grade: getValue(values, headers, 'Grade') || '',

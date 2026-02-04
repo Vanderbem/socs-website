@@ -145,6 +145,11 @@ function renderLessons(lessonsToRender) {
             <button onclick="handleLessonClick('${lesson.linkToFolder.replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-primary">
                 View Lesson →
             </button>
+            ${lesson.linkToMaterials && lesson.linkToMaterials.trim() !== '' ? `
+            <button onclick="handleLessonClick('${(lesson.linkToMaterials || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-secondary" style="margin-left:8px;">
+                View Materials
+            </button>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -337,6 +342,12 @@ let lessonTitleToTrack = null;
  * Stores the lesson URL and title, then displays the analytics modal.
  */
 function handleLessonClick(lessonUrl, lessonTitle) {
+  // Guard: don't open analytics modal for empty/invalid URLs
+  if (!lessonUrl || lessonUrl.trim() === '') {
+    alert('No link available for this item');
+    return;
+  }
+
   lessonUrlToOpen = lessonUrl;
   lessonTitleToTrack = lessonTitle;
   document.getElementById('analytics-modal').style.display = 'flex';
