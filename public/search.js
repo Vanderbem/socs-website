@@ -7,7 +7,7 @@ const searchState = {
         grade: [],
         subject: [],
       ctConcept: [],
-      hasSpanish: false
+      // hasSpanish: false  // Feature disabled: 'Has Spanish' filter commented out
     },
     sortBy: 'lessonTitle',
     sortOrder: 'asc'
@@ -69,10 +69,10 @@ function searchAndRender() {
         }
     });
     
-    // 2b. Apply Has Spanish boolean filter (checked => only show lessons with spanish)
-    if (searchState.filters.hasSpanish) {
-      filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
-    }
+    // 2b. Apply Has Spanish boolean filter (disabled)
+    // if (searchState.filters.hasSpanish) {
+    //   filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
+    // }
   
     // 3. Apply Sorting
     const sortKey = searchState.sortBy;
@@ -167,7 +167,7 @@ function highlightText(text) {
 }
 
 function updateAllFacets() {
-    const facets = ['grade', 'subject', 'ctConcept', 'hasSpanish'];
+    const facets = ['grade', 'subject', 'ctConcept'];
     facets.forEach(facetToUpdate => {
         let tempFilteredLessons = [...allLessons];
 
@@ -189,16 +189,16 @@ function updateAllFacets() {
             }
         });
 
-        // Special handling for boolean Has Spanish facet
-        if (facetToUpdate === 'hasSpanish') {
-          const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
-          const container = document.getElementById('spanish-facet');
-          if (container) {
-            const isChecked = !!searchState.filters.hasSpanish;
-            container.innerHTML = `\n          <li>\n            <label>\n              <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>\n              <span class="facet-value">Has Spanish</span>\n              <span class="facet-count">${count}</span>\n            </label>\n          </li>\n        `;
-          }
-          return; // move to next facet
-        }
+        // Special handling for boolean Has Spanish facet (disabled)
+        // if (facetToUpdate === 'hasSpanish') {
+        //   const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
+        //   const container = document.getElementById('spanish-facet');
+        //   if (container) {
+        //     const isChecked = !!searchState.filters.hasSpanish;
+        //     container.innerHTML = `\n          <li>\n            <label>\n              <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>\n              <span class="facet-value">Has Spanish</span>\n              <span class="facet-count">${count}</span>\n            </label>\n          </li>\n        `;
+        //   }
+        //   return; // move to next facet
+        // }
 
         // Now, get the counts for the facet we are currently updating
         const counts = getCountsForFacet(tempFilteredLessons, facetToUpdate);
@@ -274,7 +274,7 @@ function clearFilters() {
     if (searchInput) searchInput.value = '';
 
   // Reset our hasSpanish flag in state
-  searchState.filters.hasSpanish = false;
+  // searchState.filters.hasSpanish = false; // Feature disabled
 
     // Reset state and re-render
     searchAndRender();
@@ -287,7 +287,7 @@ function updateStateFromDOM() {
     searchState.filters.grade = Array.from(document.querySelectorAll('#grade-facet input:checked')).map(cb => cb.value);
     searchState.filters.subject = Array.from(document.querySelectorAll('#subject-facet input:checked')).map(cb => cb.value);
     searchState.filters.ctConcept = Array.from(document.querySelectorAll('#concept-facet input:checked')).map(cb => cb.value);
-    searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked);
+    // searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked); // Feature disabled
 
     const sortSelect = document.getElementById('sort-select');
     searchState.sortBy = sortSelect ? sortSelect.value : 'lessonTitle';

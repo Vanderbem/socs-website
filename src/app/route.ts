@@ -122,6 +122,9 @@ export async function GET() {
           />
         </form>
       </div>
+      <div id="search-note" style="margin-left:1rem;align-self:center;font-size:0.95rem;color:#555;">
+        Lessons available are continually being updated and revised
+      </div>
       </div>
     </header>
 
@@ -180,6 +183,7 @@ export async function GET() {
           <ul class="facet-values" id="concept-facet"></ul>
         </div>
         
+        <!--
         <div class="facet">
           <div class="facet-name">Has Spanish</div>
           <ul class="facet-values" id="spanish-facet">
@@ -191,6 +195,7 @@ export async function GET() {
             </li>
           </ul>
         </div>
+        -->
         
         
         <button class="clear-filters" id="clear-filters-btn">
