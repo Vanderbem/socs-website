@@ -6,7 +6,8 @@ const searchState = {
     filters: {
         grade: [],
         subject: [],
-        ctConcept: []
+      ctConcept: [],
+      // hasSpanish: false  // Feature disabled: 'Has Spanish' filter commented out
     },
     sortBy: 'lessonTitle',
     sortOrder: 'asc'
@@ -67,6 +68,11 @@ function searchAndRender() {
             );
         }
     });
+    
+    // 2b. Apply Has Spanish boolean filter (disabled)
+    // if (searchState.filters.hasSpanish) {
+    //   filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
+    // }
   
     // 3. Apply Sorting
     const sortKey = searchState.sortBy;
@@ -106,7 +112,7 @@ function renderLessons(lessonsToRender) {
   if (!container) return
   
   if (lessonsToRender.length === 0) {
-    container.innerHTML = '<ul class="no-results">TEST No lessons found TEST</ul>'
+    container.innerHTML = '<ul class="no-results">No lessons found</ul>'
     return
   }
   
@@ -139,6 +145,11 @@ function renderLessons(lessonsToRender) {
             <button onclick="handleLessonClick('${lesson.linkToFolder.replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-primary">
                 View Lesson →
             </button>
+            ${lesson.linkToMaterials && lesson.linkToMaterials.trim() !== '' ? `
+            <button onclick="handleLessonClick('${(lesson.linkToMaterials || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-secondary" style="margin-left:8px;">
+                View Materials
+            </button>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -177,6 +188,17 @@ function updateAllFacets() {
                 );
             }
         });
+
+        // Special handling for boolean Has Spanish facet (disabled)
+        // if (facetToUpdate === 'hasSpanish') {
+        //   const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
+        //   const container = document.getElementById('spanish-facet');
+        //   if (container) {
+        //     const isChecked = !!searchState.filters.hasSpanish;
+        //     container.innerHTML = `\n          <li>\n            <label>\n              <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>\n              <span class="facet-value">Has Spanish</span>\n              <span class="facet-count">${count}</span>\n            </label>\n          </li>\n        `;
+        //   }
+        //   return; // move to next facet
+        // }
 
         // Now, get the counts for the facet we are currently updating
         const counts = getCountsForFacet(tempFilteredLessons, facetToUpdate);
@@ -251,6 +273,9 @@ function clearFilters() {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
 
+  // Reset our hasSpanish flag in state
+  // searchState.filters.hasSpanish = false; // Feature disabled
+
     // Reset state and re-render
     searchAndRender();
 }
@@ -262,6 +287,7 @@ function updateStateFromDOM() {
     searchState.filters.grade = Array.from(document.querySelectorAll('#grade-facet input:checked')).map(cb => cb.value);
     searchState.filters.subject = Array.from(document.querySelectorAll('#subject-facet input:checked')).map(cb => cb.value);
     searchState.filters.ctConcept = Array.from(document.querySelectorAll('#concept-facet input:checked')).map(cb => cb.value);
+    // searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked); // Feature disabled
 
     const sortSelect = document.getElementById('sort-select');
     searchState.sortBy = sortSelect ? sortSelect.value : 'lessonTitle';
@@ -316,6 +342,12 @@ let lessonTitleToTrack = null;
  * Stores the lesson URL and title, then displays the analytics modal.
  */
 function handleLessonClick(lessonUrl, lessonTitle) {
+  // Guard: don't open analytics modal for empty/invalid URLs
+  if (!lessonUrl || lessonUrl.trim() === '') {
+    alert('No link available for this item');
+    return;
+  }
+
   lessonUrlToOpen = lessonUrl;
   lessonTitleToTrack = lessonTitle;
   document.getElementById('analytics-modal').style.display = 'flex';

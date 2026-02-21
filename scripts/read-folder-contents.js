@@ -88,7 +88,7 @@ async function analyzeFolderContents() {
     
     lessons.forEach((lesson, index) => {
       const rowNum = index + 2; // Account for header row
-      const columnF = lesson['Link to folder with updated lesson plan and materials'];
+      const columnF = lesson['Link to English Plan'];
       const columnM = lesson['Original Folder Link'];
       const lessonTitle = lesson['Lesson Title'];
       
