@@ -97,6 +97,7 @@ export default function SearchPage() {
               </select>
             </div>
             <ul className="ais-Hits-list" id="hits"></ul>
+            <div id="pagination" className="pagination" style={{marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}></div>
           </div>
         </main>
 
