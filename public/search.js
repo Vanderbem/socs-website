@@ -6,11 +6,13 @@ const searchState = {
     filters: {
         grade: [],
         subject: [],
-      ctConcept: [],
-      // hasSpanish: false  // Feature disabled: 'Has Spanish' filter commented out
+        ctConcept: [],
+        // hasSpanish: false  // Feature disabled: 'Has Spanish' filter commented out
     },
     sortBy: 'lessonTitle',
-    sortOrder: 'asc'
+    sortOrder: 'asc',
+    currentPage: 1,
+    pageSize: 5
 };
 
 async function loadLessons() {
@@ -102,9 +104,24 @@ function searchAndRender() {
         return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-    renderLessons(filteredLessons);
+    // --- PAGING ---
+    const totalResults = filteredLessons.length;
+    const pageSize = searchState.pageSize || 10;
+    const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+
+    // Clamp current page
+    if (!searchState.currentPage || searchState.currentPage < 1) searchState.currentPage = 1;
+    if (searchState.currentPage > totalPages) searchState.currentPage = totalPages;
+
+    const startIndex = (searchState.currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalResults);
+
+    const lessonsForPage = filteredLessons.slice(startIndex, endIndex);
+
+    renderLessons(lessonsForPage);
+    renderPagination(totalResults, searchState.currentPage, pageSize);
     updateAllFacets();
-    updateResultsCount(filteredLessons.length);
+    updateResultsCount(totalResults, startIndex + 1, endIndex);
 }
 
 function renderLessons(lessonsToRender) {
@@ -261,10 +278,13 @@ function renderFacet(elementId, counts, selectedValues) {
     }).join('');
 }
 
-function updateResultsCount(count) {
+function updateResultsCount(total, start, end) {
     const element = document.getElementById('results-count');
-    if (element) {
-        element.textContent = `${count} ${count === 1 ? 'result' : 'results'}`;
+    if (!element) return;
+    if (typeof start === 'number' && typeof end === 'number' && total > 0) {
+        element.textContent = `Showing ${start}–${end} of ${total} ${total === 1 ? 'result' : 'results'}`;
+    } else {
+        element.textContent = `${total} ${total === 1 ? 'result' : 'results'}`;
     }
 }
 
@@ -275,6 +295,9 @@ function clearFilters() {
 
   // Reset our hasSpanish flag in state
   // searchState.filters.hasSpanish = false; // Feature disabled
+
+    // Reset paging
+    searchState.currentPage = 1;
 
     // Reset state and re-render
     searchAndRender();
@@ -294,7 +317,71 @@ function updateStateFromDOM() {
 
     const sortOrderToggle = document.getElementById('sort-order-toggle');
     searchState.sortOrder = sortOrderToggle ? sortOrderToggle.dataset.order : 'asc';
+
+    // leave currentPage as-is (controlled by pagination UI or reset by interactions)
 }
+
+// PAGINATION RENDERING
+function renderPagination(totalResults, currentPage, pageSize) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+
+    const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+    if (totalPages === 1) {
+        container.innerHTML = ''; // no pagination needed
+        return;
+    }
+
+    const createPageBtn = (page, label = null, disabled = false, active = false) => {
+        const text = label || String(page);
+        return `<button class="page-btn${active ? ' active' : ''}" data-page="${page}" ${disabled ? 'disabled' : ''}>${text}</button>`;
+    };
+
+    let html = '';
+    html += createPageBtn(currentPage - 1, 'Prev', currentPage === 1);
+
+    // simple windowing: show first, maybe ellipsis, neighbors, maybe ellipsis, last
+    const maxVisible = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+        start = Math.max(1, end - maxVisible + 1);
+    }
+
+    if (start > 1) {
+        html += createPageBtn(1, '1', false, currentPage === 1);
+        if (start > 2) html += `<span class="ellipsis">…</span>`;
+    }
+
+    for (let p = start; p <= end; p++) {
+        html += createPageBtn(p, String(p), false, p === currentPage);
+    }
+
+    if (end < totalPages) {
+        if (end < totalPages - 1) html += `<span class="ellipsis">…</span>`;
+        html += createPageBtn(totalPages, String(totalPages), false, currentPage === totalPages);
+    }
+
+    html += createPageBtn(currentPage + 1, 'Next', currentPage === totalPages);
+
+    container.innerHTML = html;
+
+    // attach delegated click handler
+    container.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const page = Number(e.currentTarget.dataset.page);
+            setPage(page);
+        });
+    });
+}
+
+// Expose setPage so inline handlers can use it (and for debugging)
+function setPage(page) {
+    const pageNum = Number(page) || 1;
+    searchState.currentPage = Math.max(1, pageNum);
+    searchAndRender();
+}
+window.setPage = setPage;
 
 // Create debounced search function
 const debouncedSearchAndRender = debounce(searchAndRender, 300);
@@ -304,13 +391,22 @@ function initializeSearch() {
     loadLessons();
 
     // Search input
-    document.getElementById('search-input')?.addEventListener('input', debouncedSearchAndRender);
+    const searchInputEl = document.getElementById('search-input');
+    if (searchInputEl) {
+        searchInputEl.addEventListener('input', () => {
+            searchState.currentPage = 1;
+            debouncedSearchAndRender();
+        });
+    }
 
     // Prevent form submission which reloads the page
     document.querySelector('form[role="search"]')?.addEventListener('submit', (e) => e.preventDefault());
 
     // Sort select dropdown
-    document.getElementById('sort-select')?.addEventListener('change', searchAndRender);
+    document.getElementById('sort-select')?.addEventListener('change', () => {
+        searchState.currentPage = 1;
+        searchAndRender();
+    });
 
     // Sort order toggle button
     document.getElementById('sort-order-toggle')?.addEventListener('click', (e) => {
@@ -318,12 +414,14 @@ function initializeSearch() {
         const newOrder = button.dataset.order === 'asc' ? 'desc' : 'asc';
         button.dataset.order = newOrder;
         button.textContent = newOrder === 'asc' ? 'Ascending' : 'Descending';
+        searchState.currentPage = 1;
         searchAndRender();
     });
 
     // Filter checkboxes (delegated to the parent column)
     document.getElementById('left-column')?.addEventListener('change', (e) => {
         if (e.target.matches('.facet-checkbox')) {
+            searchState.currentPage = 1;
             searchAndRender();
         }
     });

@@ -44,7 +44,7 @@ export async function GET() {
         revisedBy: values[headers.indexOf('Revised by')] || '', // lowercase 'by'
         readyToPublish: (values[headers.indexOf('Ready to publish to webpage')] || '').toUpperCase() === 'TRUE',
         linkToFolder: values[headers.indexOf('Link to English Plan')] || '',
-        linkToMaterials: values[headers.indexOf('Link to folder with updated lesson plan and materials')] || '',
+        linkToMaterials: values[headers.indexOf('Link to English folder with updated lesson plan and materials')] || '',
         notes: values[headers.indexOf('Notes')] || '',
         lessonTitle: values[headers.indexOf('Lesson Title')] || '',
         grade: values[headers.indexOf('Grade')] || '',
