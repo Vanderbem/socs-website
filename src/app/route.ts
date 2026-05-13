@@ -218,6 +218,7 @@ export async function GET() {
         </div>
         
         <ul class="ais-Hits-list" id="hits"></ul>
+        <div id="pagination" class="pagination" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
       </div>
     </main>
 
