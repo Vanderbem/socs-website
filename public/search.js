@@ -7,7 +7,7 @@ const searchState = {
         grade: [],
         subject: [],
         ctConcept: [],
-        // hasSpanish: false  // Feature disabled: 'Has Spanish' filter commented out
+        hasSpanish: false
     },
     sortBy: 'lessonTitle',
     sortOrder: 'asc',
@@ -25,6 +25,22 @@ async function loadLessons() {
         const response = await fetch('/api/lessons');
         const lessonsData = await response.json();
 
+        if (!response.ok) {
+            const detail = lessonsData.details;
+            const detailMessage = typeof detail === 'string'
+                ? detail
+                : [
+                    detail?.message,
+                    detail?.cause,
+                    detail?.code ? `code: ${detail.code}` : '',
+                    detail?.constraint ? `constraint: ${detail.constraint}` : '',
+                    detail?.table ? `table: ${detail.table}` : '',
+                    detail?.column ? `column: ${detail.column}` : '',
+                    detail?.detail,
+                ].filter(Boolean).join(' | ');
+            throw new Error(detailMessage || lessonsData.error || `Failed to load lessons (${response.status})`);
+        }
+
         // Pre-filter lessons to only include those that are ready to publish and have a valid link.
         allLessons = lessonsData.filter(lesson =>
             lesson.readyToPublish && lesson.linkToFolder && lesson.linkToFolder.trim() !== ''
@@ -34,7 +50,7 @@ async function loadLessons() {
     } catch (error) {
         console.error('Failed to load lessons:', error);
         if (hitsContainer) {
-            hitsContainer.innerHTML = '<li class="error-message">Error loading lessons. Please try refreshing the page.</li>';
+            hitsContainer.innerHTML = `<li class="error-message">Error loading lessons: ${escapeHtml(error.message || 'Please try refreshing the page.')}</li>`;
         }
     }
 }
@@ -63,7 +79,7 @@ function searchAndRender() {
 
     // 2. Apply Filters
     Object.entries(searchState.filters).forEach(([facet, selectedValues]) => {
-        if (selectedValues.length > 0) {
+        if (Array.isArray(selectedValues) && selectedValues.length > 0) {
             const facetField = facet === 'ctConcept' ? 'ctConcept' : facet; // Map facet names to field names
             filteredLessons = filteredLessons.filter(lesson =>
                 selectedValues.some(value => lesson[facetField]?.includes(value))
@@ -71,10 +87,10 @@ function searchAndRender() {
         }
     });
     
-    // 2b. Apply Has Spanish boolean filter (disabled)
-    // if (searchState.filters.hasSpanish) {
-    //   filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
-    // }
+    // 2b. Apply Has Spanish boolean filter
+    if (searchState.filters.hasSpanish) {
+      filteredLessons = filteredLessons.filter(lesson => !!lesson.hasSpanish);
+    }
   
     // 3. Apply Sorting
     const sortKey = searchState.sortBy;
@@ -159,12 +175,22 @@ function renderLessons(lessonsToRender) {
             ${lesson.dateFinalized ? `<span class="hit-date">Finalized: ${lesson.dateFinalized}</span>` : ''}
           </div>
           <div class="hit-actions">
-            <button onclick="handleLessonClick('${lesson.linkToFolder.replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-primary">
+            <button onclick="handleLessonClick('${lesson.id}', '${lesson.linkToFolder.replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;, false)" class="btn-primary">
                 View Lesson →
             </button>
             ${lesson.linkToMaterials && lesson.linkToMaterials.trim() !== '' ? `
-            <button onclick="handleLessonClick('${(lesson.linkToMaterials || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;)" class="btn-secondary" style="margin-left:8px;">
+            <button onclick="handleLessonClick('${lesson.id}', '${(lesson.linkToMaterials || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;, false)" class="btn-secondary" style="margin-left:8px;">
                 View Materials
+            </button>
+            ` : ''}
+            ${lesson.linkToSpanishLesson && lesson.linkToSpanishLesson.trim() !== '' ? `
+            <button onclick="handleLessonClick('${lesson.id}', '${(lesson.linkToSpanishLesson || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;, true)" class="btn-secondary" style="margin-left:8px;">
+                Spanish Lesson
+            </button>
+            ` : ''}
+            ${lesson.linkToSpanishMaterials && lesson.linkToSpanishMaterials.trim() !== '' ? `
+            <button onclick="handleLessonClick('${lesson.id}', '${(lesson.linkToSpanishMaterials || '').replace(/'/g, "\\'")}', &quot;${lesson.lessonTitle.replace(/"/g, "&quot;")}&quot;, true)" class="btn-secondary" style="margin-left:8px;">
+                Spanish Materials
             </button>
             ` : ''}
           </div>
@@ -206,22 +232,53 @@ function updateAllFacets() {
             }
         });
 
-        // Special handling for boolean Has Spanish facet (disabled)
-        // if (facetToUpdate === 'hasSpanish') {
-        //   const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
-        //   const container = document.getElementById('spanish-facet');
-        //   if (container) {
-        //     const isChecked = !!searchState.filters.hasSpanish;
-        //     container.innerHTML = `\n          <li>\n            <label>\n              <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>\n              <span class="facet-value">Has Spanish</span>\n              <span class="facet-count">${count}</span>\n            </label>\n          </li>\n        `;
-        //   }
-        //   return; // move to next facet
-        // }
+        if (searchState.filters.hasSpanish) {
+            tempFilteredLessons = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish);
+        }
 
         // Now, get the counts for the facet we are currently updating
         const counts = getCountsForFacet(tempFilteredLessons, facetToUpdate);
         const facetElementId = facetToUpdate === 'ctConcept' ? 'concept-facet' : `${facetToUpdate}-facet`;
         renderFacet(facetElementId, counts, searchState.filters[facetToUpdate]);
     });
+
+    updateSpanishFacetCount();
+}
+
+function updateSpanishFacetCount() {
+  let tempFilteredLessons = [...allLessons];
+
+  if (searchState.query) {
+    tempFilteredLessons = tempFilteredLessons.filter(lesson =>
+      ['lessonTitle', 'originalAuthor', 'subject', 'ctConcept', 'grade'].some(field =>
+        lesson[field]?.toLowerCase().includes(searchState.query.toLowerCase())
+      )
+    );
+  }
+
+  ['grade', 'subject', 'ctConcept'].forEach(facet => {
+    if (searchState.filters[facet].length > 0) {
+      tempFilteredLessons = tempFilteredLessons.filter(lesson =>
+        searchState.filters[facet].some(value => lesson[facet]?.includes(value))
+      );
+    }
+  });
+
+  const container = document.getElementById('spanish-facet');
+  if (!container) return;
+
+  const count = tempFilteredLessons.filter(lesson => !!lesson.hasSpanish).length;
+  const isChecked = !!searchState.filters.hasSpanish;
+
+  container.innerHTML = `
+    <li class="${isChecked ? 'active' : ''}">
+      <label>
+        <input type="checkbox" id="has-spanish-checkbox" class="facet-checkbox" ${isChecked ? 'checked' : ''}>
+        <span class="facet-value">Has Spanish</span>
+        <span class="facet-count">${count}</span>
+      </label>
+    </li>
+  `;
 }
 
 
@@ -293,8 +350,7 @@ function clearFilters() {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
 
-  // Reset our hasSpanish flag in state
-  // searchState.filters.hasSpanish = false; // Feature disabled
+    searchState.filters.hasSpanish = false;
 
     // Reset paging
     searchState.currentPage = 1;
@@ -310,7 +366,7 @@ function updateStateFromDOM() {
     searchState.filters.grade = Array.from(document.querySelectorAll('#grade-facet input:checked')).map(cb => cb.value);
     searchState.filters.subject = Array.from(document.querySelectorAll('#subject-facet input:checked')).map(cb => cb.value);
     searchState.filters.ctConcept = Array.from(document.querySelectorAll('#concept-facet input:checked')).map(cb => cb.value);
-    // searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked); // Feature disabled
+    searchState.filters.hasSpanish = !!(document.getElementById('has-spanish-checkbox') && document.getElementById('has-spanish-checkbox').checked);
 
     const sortSelect = document.getElementById('sort-select');
     searchState.sortBy = sortSelect ? sortSelect.value : 'lessonTitle';
@@ -430,153 +486,420 @@ function initializeSearch() {
     document.getElementById('clear-filters-btn')?.addEventListener('click', clearFilters);
 }
 
-// --- NEW ANALYTICS & LESSON VIEW LOGIC ---
+// --- LESSON ACCESS LOGIC ---
 
-let lessonUrlToOpen = null;
-let lessonTitleToTrack = null;
-
-/**
- * Handles clicking on a "View Lesson" button.
- * Stores the lesson URL and title, then displays the analytics modal.
- */
-function handleLessonClick(lessonUrl, lessonTitle) {
-  // Guard: don't open analytics modal for empty/invalid URLs
+async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = false) {
   if (!lessonUrl || lessonUrl.trim() === '') {
     alert('No link available for this item');
     return;
   }
 
-  lessonUrlToOpen = lessonUrl;
-  lessonTitleToTrack = lessonTitle;
-  document.getElementById('analytics-modal').style.display = 'flex';
+  const lessonWindow = window.open('about:blank', '_blank');
+
+  if (!lessonWindow) {
+    alert('Please allow pop-ups to open lesson links.');
+    return;
+  }
+
+  lessonWindow.opener = null;
+
+  try {
+    const response = await fetch('/api/track/lesson-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        lessonId,
+        lessonUrl,
+        isSpanish,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('Lesson access was not logged:', errorBody);
+    }
+  } catch (error) {
+    console.error(`Failed to track lesson access for ${lessonTitle}:`, error);
+  } finally {
+    lessonWindow.location.href = lessonUrl;
+  }
 }
 
 // Expose handleLessonClick to the global scope so inline `onclick` attributes can find it
 window.handleLessonClick = handleLessonClick;
 
-/**
- * Hides the modal and opens the stored lesson link in a new tab.
- */
-function proceedToLesson() {
-  document.getElementById('analytics-modal').style.display = 'none';
-  document.getElementById('analytics-form').reset();
-  document.getElementById('grade-level-group').style.display = 'none';
+// --- PROFILE LOGIC ---
 
-  if (lessonUrlToOpen) {
-    window.open(lessonUrlToOpen, '_blank', 'noopener,noreferrer');
-    lessonUrlToOpen = null; // Clear after use
-    lessonTitleToTrack = null; // Clear after use
+function setProfileStatus(message, isError = false) {
+  const status = document.getElementById('profile-status');
+  if (!status) return;
+  status.textContent = message;
+  status.style.color = isError ? '#d32f2f' : '#2e7d32';
+}
+
+function setProfileFormDisabled(isDisabled) {
+  const form = document.getElementById('profile-form');
+  if (!form) return;
+
+  form.querySelectorAll('input, select, button').forEach((field) => {
+    if (field.id === 'cancel-profile-button') return;
+    field.disabled = isDisabled;
+  });
+}
+
+async function loadProfile() {
+  const emailInput = document.getElementById('profile-email');
+  const nameInput = document.getElementById('profile-name');
+  const gradeSelect = document.getElementById('profile-grade');
+  const districtInput = document.getElementById('profile-district');
+
+  setProfileStatus('Loading profile...');
+  setProfileFormDisabled(true);
+
+  try {
+    const response = await fetch('/api/profile');
+    const profile = await response.json();
+
+    if (!response.ok) {
+      throw new Error(profile.error || 'Unable to load profile');
+    }
+
+    if (emailInput) emailInput.value = profile.email || '';
+    if (nameInput) nameInput.value = profile.name || '';
+    if (gradeSelect) gradeSelect.value = profile.gradeLevel || '';
+    if (districtInput) districtInput.value = profile.district || '';
+    setProfileStatus('');
+  } catch (error) {
+    console.error('Failed to load profile:', error);
+    setProfileStatus(error.message || 'Unable to load profile.', true);
+  } finally {
+    setProfileFormDisabled(false);
   }
 }
 
-/**
- * Generates or retrieves a unique anonymous ID for the user.
- */
-function getAnonymousId() {
-  let anonId = localStorage.getItem('socs-anonymous-id');
-  if (!anonId) {
-    anonId = crypto.randomUUID();
-    localStorage.setItem('socs-anonymous-id', anonId);
-  }
-  return anonId;
+function openProfileModal() {
+  const modal = document.getElementById('profile-modal');
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  loadProfile();
 }
 
-/**
- * Sets up event listeners for the analytics modal.
- */
-function initializeAnalyticsModal() {
-  const form = document.getElementById('analytics-form');
-  const skipButton = document.getElementById('skip-button');
-  const teacherRadios = document.querySelectorAll('input[name="isTeacher"]');
+function closeProfileModal() {
+  const modal = document.getElementById('profile-modal');
+  const form = document.getElementById('profile-form');
 
-  // Handle form submission
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  if (form) form.reset();
+  setProfileStatus('');
+}
 
-    const formData = new FormData(form);
-    const isTeacher = formData.get('isTeacher') === 'true';
-    const gradeLevel = formData.get('gradeLevel') || null;
-    const schoolDistrict = formData.get('schoolDistrict') || null;
+async function saveProfile(event) {
+  event.preventDefault();
 
-    // Validate that if teacher is selected, grade level is provided
-    if (isTeacher && !gradeLevel) {
-      alert('Please select a grade level.');
+  const gradeSelect = document.getElementById('profile-grade');
+  const districtInput = document.getElementById('profile-district');
+  const gradeLevel = gradeSelect?.value || null;
+  const district = districtInput?.value.trim() || null;
+
+  setProfileStatus('Saving profile...');
+  setProfileFormDisabled(true);
+
+  try {
+    const response = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gradeLevel, district }),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Unable to save profile');
+    }
+
+    setProfileStatus('Profile saved.');
+    window.setTimeout(closeProfileModal, 900);
+  } catch (error) {
+    console.error('Failed to save profile:', error);
+    setProfileStatus(error.message || 'Unable to save profile.', true);
+  } finally {
+    setProfileFormDisabled(false);
+  }
+}
+
+function initializeProfileModal() {
+  document.getElementById('open-profile-modal')?.addEventListener('click', openProfileModal);
+  document.getElementById('cancel-profile-button')?.addEventListener('click', closeProfileModal);
+  document.getElementById('profile-form')?.addEventListener('submit', saveProfile);
+}
+
+// --- FEEDBACK DRAFT LOGIC ---
+
+const FEEDBACK_RECIPIENT = 'vanderberm@sou.edu';
+let selectedFeedbackLesson = null;
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getFeedbackText() {
+  return document.getElementById('feedback-text')?.value.trim() || '';
+}
+
+function formatFeedbackDraft() {
+  const feedbackText = getFeedbackText();
+  const lessonTitle = selectedFeedbackLesson?.lessonTitle?.trim();
+  const lessonLink = selectedFeedbackLesson?.linkToFolder?.trim();
+  const subject = lessonTitle
+    ? `SOCS lesson feedback: ${lessonTitle}`
+    : 'SOCS lesson feedback';
+
+  const lines = [
+    `To: ${FEEDBACK_RECIPIENT}`,
+    `Subject: ${subject}`,
+    '',
+    'Feedback:',
+    feedbackText || '[Enter feedback here]',
+  ];
+
+  if (lessonTitle || lessonLink) {
+    lines.push('', 'Lesson:');
+    if (lessonTitle) lines.push(`Title: ${lessonTitle}`);
+    if (lessonLink) lines.push(`Link: ${lessonLink}`);
+  }
+
+  lines.push('', `Submitted from: ${window.location.href}`);
+
+  return lines.join('\n');
+}
+
+function updateFeedbackPreview() {
+  const preview = document.getElementById('feedback-preview');
+  if (!preview) return;
+  preview.textContent = formatFeedbackDraft();
+}
+
+function setFeedbackStatus(message, isError = false) {
+  const status = document.getElementById('feedback-status');
+  if (!status) return;
+  status.textContent = message;
+  status.style.color = isError ? '#d32f2f' : '#2e7d32';
+}
+
+function clearFeedbackStatusSoon() {
+  window.setTimeout(() => setFeedbackStatus(''), 2500);
+}
+
+function openFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  updateFeedbackPreview();
+  document.getElementById('feedback-text')?.focus();
+}
+
+function closeFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  const form = document.getElementById('feedback-form');
+  const lessonGroup = document.getElementById('feedback-lesson-group');
+  const results = document.getElementById('feedback-lesson-results');
+  const selectedLesson = document.getElementById('feedback-selected-lesson');
+
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  if (form) form.reset();
+  if (lessonGroup) lessonGroup.style.display = 'none';
+  if (results) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+  }
+  if (selectedLesson) {
+    selectedLesson.innerHTML = '';
+    selectedLesson.style.display = 'none';
+  }
+  selectedFeedbackLesson = null;
+  setFeedbackStatus('');
+  updateFeedbackPreview();
+}
+
+function renderSelectedFeedbackLesson() {
+  const selectedLesson = document.getElementById('feedback-selected-lesson');
+  if (!selectedLesson) return;
+
+  if (!selectedFeedbackLesson) {
+    selectedLesson.innerHTML = '';
+    selectedLesson.style.display = 'none';
+    updateFeedbackPreview();
+    return;
+  }
+
+  selectedLesson.innerHTML = `
+    <strong>${escapeHtml(selectedFeedbackLesson.lessonTitle)}</strong>
+    <span>${escapeHtml(selectedFeedbackLesson.linkToFolder)}</span>
+  `;
+  selectedLesson.style.display = 'block';
+  updateFeedbackPreview();
+}
+
+function selectFeedbackLesson(lessonIndex) {
+  const lesson = allLessons[lessonIndex];
+  if (!lesson) return;
+
+  selectedFeedbackLesson = lesson;
+  const searchInput = document.getElementById('feedback-lesson-search');
+  const results = document.getElementById('feedback-lesson-results');
+
+  if (searchInput) searchInput.value = lesson.lessonTitle || '';
+  if (results) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+  }
+  renderSelectedFeedbackLesson();
+}
+
+function renderFeedbackLessonResults(query) {
+  const results = document.getElementById('feedback-lesson-results');
+  if (!results) return;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+    return;
+  }
+
+  const matches = allLessons
+    .map((lesson, index) => ({ lesson, index }))
+    .filter(({ lesson }) => lesson.lessonTitle?.toLowerCase().includes(normalizedQuery))
+    .slice(0, 8);
+
+  if (matches.length === 0) {
+    results.innerHTML = '<div class="feedback-lesson-result">No matching lessons found</div>';
+    results.style.display = 'block';
+    return;
+  }
+
+  results.innerHTML = matches.map(({ lesson, index }) => `
+    <button type="button" class="feedback-lesson-result" data-lesson-index="${index}">
+      ${escapeHtml(lesson.lessonTitle)}
+    </button>
+  `).join('');
+  results.style.display = 'block';
+}
+
+function downloadFeedbackDraft() {
+  const draft = formatFeedbackDraft();
+  const today = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([draft], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `socs-lesson-feedback-${today}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function copyFeedbackDraft() {
+  const draft = formatFeedbackDraft();
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(draft);
+    } else {
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = draft;
+      tempTextArea.setAttribute('readonly', '');
+      tempTextArea.style.position = 'fixed';
+      tempTextArea.style.left = '-9999px';
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempTextArea);
+    }
+
+    setFeedbackStatus('Draft copied.');
+    clearFeedbackStatusSoon();
+  } catch (error) {
+    console.error('Failed to copy feedback draft:', error);
+    setFeedbackStatus('Unable to copy draft. Please download it instead.', true);
+  }
+}
+
+function initializeFeedbackModal() {
+  const form = document.getElementById('feedback-form');
+  const openButton = document.getElementById('open-feedback-modal');
+  const cancelButton = document.getElementById('cancel-feedback-button');
+  const copyButton = document.getElementById('copy-feedback-button');
+  const includeLessonToggle = document.getElementById('include-lesson-toggle');
+  const lessonSearch = document.getElementById('feedback-lesson-search');
+  const lessonResults = document.getElementById('feedback-lesson-results');
+  const feedbackText = document.getElementById('feedback-text');
+
+  openButton?.addEventListener('click', openFeedbackModal);
+  cancelButton?.addEventListener('click', closeFeedbackModal);
+  copyButton?.addEventListener('click', copyFeedbackDraft);
+  feedbackText?.addEventListener('input', updateFeedbackPreview);
+
+  includeLessonToggle?.addEventListener('change', (event) => {
+    const lessonGroup = document.getElementById('feedback-lesson-group');
+    const includeLesson = event.target.checked;
+
+    if (lessonGroup) lessonGroup.style.display = includeLesson ? 'block' : 'none';
+    if (!includeLesson) {
+      selectedFeedbackLesson = null;
+      if (lessonSearch) lessonSearch.value = '';
+      if (lessonResults) {
+        lessonResults.innerHTML = '';
+        lessonResults.style.display = 'none';
+      }
+      renderSelectedFeedbackLesson();
+    } else {
+      lessonSearch?.focus();
+    }
+  });
+
+  lessonSearch?.addEventListener('input', (event) => {
+    selectedFeedbackLesson = null;
+    renderSelectedFeedbackLesson();
+    renderFeedbackLessonResults(event.target.value);
+  });
+
+  lessonResults?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-lesson-index]');
+    if (!button) return;
+    selectFeedbackLesson(Number(button.dataset.lessonIndex));
+  });
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    if (!getFeedbackText()) {
+      setFeedbackStatus('Please enter feedback before downloading.', true);
       return;
     }
 
-    const payload = {
-      lessonUrl: lessonUrlToOpen,
-      lessonTitle: lessonTitleToTrack || 'Unknown Lesson',
-      isTeacher,
-      gradeLevel,
-      schoolDistrict,
-      interactionType: 'submitted'
-    };
-
-    console.log('Submitting payload:', payload);
-
-    try {
-      const response = await fetch('/api/track/lesson-interaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      console.log('Analytics submitted successfully');
-    } catch (error) {
-      console.error("Failed to submit analytics:", error);
-      // We still proceed to the lesson even if the analytics call fails
-    } finally {
-      proceedToLesson();
-    }
+    downloadFeedbackDraft();
+    setFeedbackStatus('Draft downloaded.');
+    clearFeedbackStatusSoon();
   });
 
-  // Handle the skip button
-  skipButton.addEventListener('click', async () => {
-    // Track the skip interaction
-    const payload = {
-      lessonUrl: lessonUrlToOpen,
-      lessonTitle: lessonTitleToTrack || 'Unknown Lesson',
-      interactionType: 'skipped'
-    };
-
-    try {
-      await fetch('/api/track/lesson-interaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      console.log('Skip interaction tracked');
-    } catch (error) {
-      console.error("Failed to track skip:", error);
-    }
-
-    proceedToLesson();
-  });
-
-  // Show/hide teacher fields based on teacher status
-  teacherRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      const isTeacher = e.target.value === 'true';
-      const gradeGroup = document.getElementById('grade-level-group');
-      const teacherInfoGroup = document.getElementById('teacher-info-group');
-      const gradeSelect = document.getElementById('gradeLevel');
-
-      if (isTeacher) {
-        gradeGroup.style.display = 'block';
-        teacherInfoGroup.style.display = 'block';
-        gradeSelect.required = true;
-      } else {
-        gradeGroup.style.display = 'none';
-        teacherInfoGroup.style.display = 'none';
-        gradeSelect.required = false;
-      }
-    });
-  });
+  updateFeedbackPreview();
 }
 
 // --- SCRIPT EXECUTION ---
@@ -585,9 +908,11 @@ function initializeAnalyticsModal() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initializeSearch();
-        initializeAnalyticsModal();
+        initializeProfileModal();
+        initializeFeedbackModal();
     });
 } else {
     initializeSearch();
-    initializeAnalyticsModal();
+    initializeProfileModal();
+    initializeFeedbackModal();
 }
