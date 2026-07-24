@@ -506,8 +506,8 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
   try {
     const response = await fetch('/api/track/lesson-access', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      keepalive: true,
       body: JSON.stringify({
         lessonId,
         lessonUrl,
@@ -640,7 +640,7 @@ function initializeProfileModal() {
 
 // --- FEEDBACK DRAFT LOGIC ---
 
-const FEEDBACK_RECIPIENT = 'vanderberm@sou.edu';
+const FEEDBACK_RECIPIENT = 'vanderbem@sou.edu';
 let selectedFeedbackLesson = null;
 
 function escapeHtml(value) {

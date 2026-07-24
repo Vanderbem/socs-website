@@ -72,7 +72,7 @@ export async function GET() {
         grade: lesson.grades.join(', '),
         ctConcept: lesson.ctConcepts.join(', '),
         subject: lesson.subjects.join(', '),
-        originalAuthor: '',
+        originalAuthor: lesson.author,
         originalFolderLink: '',
         hasSpanish: Boolean(lesson.spanishFolder && lesson.spanishLesson),
       }))

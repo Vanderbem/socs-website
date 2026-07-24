@@ -19,7 +19,7 @@ export async function GET() {
   const shellClass = isSignedIn ? 'instant-search-container' : 'instant-search-container app-shell'
   const resultsCount = isSignedIn ? '' : '0 results'
   const hitsContent = isSignedIn ? '' : '<li class="no-results">Sign in with Google to view lessons.</li>'
-  const scriptTag = isSignedIn ? '<script src="/search.js?v=db-access-5"></script>' : ''
+  const scriptTag = isSignedIn ? '<script src="/search.js?v=db-access-6"></script>' : ''
   const profileButton = isSignedIn ? '<button type="button" id="open-profile-modal" class="feedback-button profile-button">Profile</button>' : ''
   const loginModal = isSignedIn ? '' : `
     <div id="login-required-modal" class="modal-overlay auth-required-overlay" aria-hidden="false">

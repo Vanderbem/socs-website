@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
-const connectionString = process.env.DATABASE_URL ||process.env.LOCAL_POSTGRES_URL || process.env.POSTGRES_URL;
+const connectionString = process.env.LOCAL_POSTGRES_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (!connectionString) {
   throw new Error('LOCAL_POSTGRES_URL, POSTGRES_URL, or DATABASE_URL must be set');

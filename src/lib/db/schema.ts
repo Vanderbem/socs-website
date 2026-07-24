@@ -43,6 +43,7 @@ export const teachers = pgTable('teachers', {
 export const lessons = pgTable('lessons', {
   id: integer('id').primaryKey(),
   title: text('title').notNull(),
+  author: text('author').notNull(),
   grades: gradeLevel('grades').array().notNull(),
   subjects: lessonSubject('subjects').array().notNull(),
   ctConcepts: ctConcept('ct_concepts').array().notNull(),

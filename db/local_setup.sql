@@ -49,9 +49,11 @@ CREATE TABLE IF NOT EXISTS teachers (
   updated_at timestamp NOT NULL DEFAULT now()
 );
 
+DROP TABLE IF EXISTS lessons CASCADE;
 CREATE TABLE IF NOT EXISTS lessons (
   id integer PRIMARY KEY,
   title text NOT NULL,
+  author text NOT NULL,
   grades grade_level[] NOT NULL,
   subjects lesson_subject[] NOT NULL,
   ct_concepts ct_concept[] NOT NULL,
@@ -78,6 +80,7 @@ CREATE INDEX IF NOT EXISTS access_logs_time_accessed_idx ON access_logs (time_ac
 INSERT INTO lessons (
   id,
   title,
+  author,
   grades,
   subjects,
   ct_concepts,
@@ -89,6 +92,7 @@ INSERT INTO lessons (
   (
     45,
     'Decomposing teen numbers into a ten and some ones',
+    'Seed Author',
     ARRAY['1']::grade_level[],
     ARRAY['Math']::lesson_subject[],
     ARRAY['Decomposition']::ct_concept[],
@@ -100,6 +104,7 @@ INSERT INTO lessons (
   (
     63,
     'What are living and nonliving things?',
+    'Seed Author',
     ARRAY['1']::grade_level[],
     ARRAY['ELA']::lesson_subject[],
     ARRAY['Algorithms']::ct_concept[],
@@ -111,6 +116,7 @@ INSERT INTO lessons (
   (
     83,
     'Diorama of Habitat and Graphic Organizer',
+    'Seed Author',
     ARRAY['1']::grade_level[],
     ARRAY['ELA']::lesson_subject[],
     ARRAY['Abstraction']::ct_concept[],
@@ -121,6 +127,7 @@ INSERT INTO lessons (
   )
 ON CONFLICT (id) DO UPDATE SET
   title = EXCLUDED.title,
+  author = EXCLUDED.author,
   grades = EXCLUDED.grades,
   subjects = EXCLUDED.subjects,
   ct_concepts = EXCLUDED.ct_concepts,

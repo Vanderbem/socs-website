@@ -17,12 +17,17 @@ export async function POST(request: Request) {
     const lessonId = Number(body.lessonId);
     const lessonUrl = typeof body.lessonUrl === 'string' ? body.lessonUrl.trim() : '';
     const isSpanish = Boolean(body.isSpanish);
+    const hasValidLessonId = Number.isInteger(lessonId);
 
-    if (!Number.isInteger(lessonId)) {
+    if (!hasValidLessonId && !lessonUrl) {
       return NextResponse.json({ error: 'Lesson ID is required' }, { status: 400 });
     }
 
-    let [lesson] = await db.select({ id: lessons.id }).from(lessons).where(eq(lessons.id, lessonId)).limit(1);
+    let lesson: { id: number } | undefined;
+
+    if (hasValidLessonId) {
+      [lesson] = await db.select({ id: lessons.id }).from(lessons).where(eq(lessons.id, lessonId)).limit(1);
+    }
 
     if (!lesson && lessonUrl) {
       [lesson] = await db
