@@ -21,12 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+    allowedRedirectOrigins={[
+        'https://socs4all.sou.edu',
+        'https://*.sou.edu'
+      ]}>
       <html lang="en">
         <head>
           <Script id="iframe-escape" strategy="beforeInteractive">
             {`
-              if (window.self !== window.top) {
+              // If the user lands on sign-in or sign-up inside the iframe, 
+              // pop them out to full screen so third-party cookies don't get blocked.
+              if (window.self !== window.top && (window.location.pathname.includes('/sign-in') || window.location.pathname.includes('/sign-up'))) {
                 window.top.location.href = window.location.href;
               }
             `}
