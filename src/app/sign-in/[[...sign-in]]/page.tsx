@@ -1,9 +1,18 @@
 'use client'
 
+import { useEffect } from 'react'
 import * as Clerk from '@clerk/elements/common'
 import * as SignIn from '@clerk/elements/sign-in'
 
 export default function SignInPage() {
+  useEffect(() => {
+    // Detect if trapped inside the WordPress iframe
+    if (window.top !== window.self) {
+      // Break out and redirect the top-level browser window to this sign-in URL
+      window.top!.location.href = window.location.href
+    }
+  }, [])
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 px-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
