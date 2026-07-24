@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
+import Script from 'next/script';
+// @ts-ignore: allow importing global css without type declarations
 import "./globals.css";
 
 const inter = Inter({
@@ -21,6 +23,15 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
+        <head>
+          <Script id="iframe-escape" strategy="beforeInteractive">
+            {`
+              if (window.self !== window.top) {
+                window.top.location.href = window.location.href;
+              }
+            `}
+          </Script>
+        </head>
         <body
           className={`${inter.variable} font-sans antialiased`}
         >
