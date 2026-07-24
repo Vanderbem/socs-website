@@ -1,6 +1,38 @@
 import { NextResponse } from 'next/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 
 export async function GET() {
+  const { userId } = await auth()
+  const isSignedIn = !!userId
+
+  if (userId) {
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const unsafeMetadata = user.unsafeMetadata as { onboardingCompleted?: boolean } | undefined
+
+    if (!unsafeMetadata?.onboardingCompleted) {
+      return NextResponse.redirect(new URL('/onboarding', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'))
+    }
+  }
+
+  const bodyClass = isSignedIn ? '' : ' class="signed-out-preview"'
+  const shellClass = isSignedIn ? 'instant-search-container' : 'instant-search-container app-shell'
+  const resultsCount = isSignedIn ? '' : '0 results'
+  const hitsContent = isSignedIn ? '' : '<li class="no-results">Sign in with Google to view lessons.</li>'
+  const scriptTag = isSignedIn ? '<script src="/search.js?v=db-access-6"></script>' : ''
+  const profileButton = isSignedIn ? '<button type="button" id="open-profile-modal" class="feedback-button profile-button">Profile</button>' : ''
+  const loginModal = isSignedIn ? '' : `
+    <div id="login-required-modal" class="modal-overlay auth-required-overlay" aria-hidden="false">
+      <div class="modal-content auth-required-modal">
+        <h2>Sign in to view lessons</h2>
+        <p>Use Google to access the SOCS4AI lesson search and lesson materials.</p>
+        <div class="modal-buttons">
+          <a href="/sign-in" class="btn-submit auth-google-button">Continue with Google</a>
+        </div>
+      </div>
+    </div>
+  `
+
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -42,6 +74,8 @@ export async function GET() {
       border-radius: 8px;
       width: 90%;
       max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
     .modal-content h2 {
@@ -67,6 +101,115 @@ export async function GET() {
       border: 1px solid #ccc;
       border-radius: 4px;
       background-color: #f8f8f8;
+    }
+    .modal-content textarea,
+    .modal-content input[type="text"],
+    .modal-content input[type="email"],
+    .modal-content input[type="search"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #fff;
+      font-size: 1rem;
+    }
+    .modal-content input[readonly] {
+      background-color: #f3f5f7;
+      color: #555;
+    }
+    .modal-content textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .modal-content .inline-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+    .feedback-button {
+      margin-top: 0.75rem;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background-color: #0070f3;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background-color 0.2s;
+    }
+    .feedback-button:hover {
+      background-color: #0051cc;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .profile-button {
+      background-color: #374151;
+    }
+    .profile-button:hover {
+      background-color: #1f2937;
+    }
+    .feedback-lesson-results {
+      margin-top: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 170px;
+      overflow-y: auto;
+      display: none;
+    }
+    .feedback-lesson-result {
+      width: 100%;
+      display: block;
+      padding: 0.65rem 0.75rem;
+      border: none;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+      color: #333;
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .feedback-lesson-result:hover,
+    .feedback-lesson-result:focus {
+      background-color: #f5f8ff;
+      outline: none;
+    }
+    .feedback-selected-lesson {
+      display: none;
+      padding: 0.75rem;
+      border: 1px solid #d7e8fb;
+      border-radius: 4px;
+      background-color: #f5fbff;
+      color: #333;
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
+    .feedback-selected-lesson strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .feedback-preview {
+      min-height: 160px;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f8f8f8;
+      color: #333;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .feedback-status {
+      min-height: 1.2rem;
+      margin-top: 0.75rem;
+      color: #2e7d32;
+      font-size: 0.9rem;
     }
     .modal-content #teacher-radios {
       display: flex;
@@ -105,10 +248,39 @@ export async function GET() {
     .btn-skip:hover {
         background-color: #c7c7c7;
     }
+    .signed-out-preview {
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .signed-out-preview .app-shell {
+      filter: blur(5px);
+      pointer-events: none;
+      user-select: none;
+    }
+    .auth-required-overlay {
+      display: flex;
+      backdrop-filter: blur(2px);
+    }
+    .auth-required-modal {
+      text-align: center;
+    }
+    .auth-required-modal .modal-buttons {
+      justify-content: center;
+    }
+    .auth-google-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
   </style>
 </head>
-<body>
-  <div class="instant-search-container">
+<body${bodyClass}>
+  <div class="${shellClass}">
     <header>
       <div class="header-left">
         <a href="/"><img src="/socs-wordmark.png" alt="SOCS For All" style="height: 50px;" /></a>
@@ -123,7 +295,12 @@ export async function GET() {
         </form>
       </div>
       <div id="search-note" style="margin-left:1rem;align-self:center;font-size:0.95rem;color:#555;">
-        Lessons available are continually being updated and revised
+        Lessons available are continually being updated and revised.
+        Spanish translations currently under review. 
+        <div class="header-actions">
+          ${profileButton}
+          <button type="button" id="open-feedback-modal" class="feedback-button">Submit lesson feedback</button>
+        </div>
       </div>
       </div>
     </header>
@@ -166,6 +343,83 @@ export async function GET() {
       </div>
     </div>
 
+    <!-- Profile Pop-up Modal -->
+    <div id="profile-modal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Profile</h2>
+        <p>Update the grade and district saved with your SOCS4AI account.</p>
+        <form id="profile-form">
+          <div class="form-group">
+            <label for="profile-email">Email</label>
+            <input type="email" id="profile-email" readonly>
+          </div>
+          <div class="form-group">
+            <label for="profile-name">Name</label>
+            <input type="text" id="profile-name" readonly>
+          </div>
+          <div class="form-group">
+            <label for="profile-grade">Grade</label>
+            <select id="profile-grade" name="gradeLevel">
+              <option value="">Select a grade</option>
+              <option value="K">Kindergarten</option>
+              <option value="1">1st Grade</option>
+              <option value="2">2nd Grade</option>
+              <option value="3">3rd Grade</option>
+              <option value="4">4th Grade</option>
+              <option value="5">5th Grade</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="profile-district">School District</label>
+            <input type="text" id="profile-district" name="district" placeholder="Enter your school district">
+          </div>
+          <div id="profile-status" class="feedback-status" role="status" aria-live="polite"></div>
+          <div class="modal-buttons">
+            <button type="button" id="cancel-profile-button" class="btn-skip">Cancel</button>
+            <button type="submit" class="btn-submit">Save Profile</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Feedback Pop-up Modal -->
+    <div id="feedback-modal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Lesson feedback</h2>
+        <p>Share suggestions for improvements. If the feedback is about a specific lesson, include the lesson title and link.</p>
+        <form id="feedback-form">
+          <div class="form-group">
+            <label for="feedback-text">Feedback</label>
+            <textarea id="feedback-text" name="feedbackText" placeholder="What would you suggest improving?" required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="inline-checkbox-label">
+              <input type="checkbox" id="include-lesson-toggle" name="includeLesson">
+              Include lesson?
+            </label>
+          </div>
+          <div class="form-group" id="feedback-lesson-group" style="display: none;">
+            <label for="feedback-lesson-search">Search by lesson title</label>
+            <input id="feedback-lesson-search" type="search" autocomplete="off" placeholder="Start typing a lesson title">
+            <div id="feedback-lesson-results" class="feedback-lesson-results"></div>
+          </div>
+          <div class="form-group">
+            <div id="feedback-selected-lesson" class="feedback-selected-lesson"></div>
+          </div>
+          <div class="form-group">
+            <label for="feedback-preview">Email draft preview</label>
+            <div id="feedback-preview" class="feedback-preview"></div>
+            <div id="feedback-status" class="feedback-status" role="status" aria-live="polite"></div>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" id="cancel-feedback-button" class="btn-skip">Cancel</button>
+            <button type="button" id="copy-feedback-button" class="btn-skip">Copy Draft</button>
+            <button type="submit" class="btn-submit">Download Draft</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <main>
       <div id="left-column">
         <div class="facet">
@@ -183,7 +437,6 @@ export async function GET() {
           <ul class="facet-values" id="concept-facet"></ul>
         </div>
         
-        <!--
         <div class="facet">
           <div class="facet-name">Has Spanish</div>
           <ul class="facet-values" id="spanish-facet">
@@ -195,7 +448,6 @@ export async function GET() {
             </li>
           </ul>
         </div>
-        -->
         
         
         <button class="clear-filters" id="clear-filters-btn">
@@ -205,7 +457,7 @@ export async function GET() {
 
       <div id="right-column">
         <div class="results-header">
-          <span id="results-count"></span>
+          <span id="results-count">${resultsCount}</span>
           <div id="sort-by-wrapper">
             <select id="sort-select">
               <option value="lessonTitle">Title</option>
@@ -217,7 +469,7 @@ export async function GET() {
           </div>
         </div>
         
-        <ul class="ais-Hits-list" id="hits"></ul>
+        <ul class="ais-Hits-list" id="hits">${hitsContent}</ul>
         <div id="pagination" class="pagination" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
       </div>
     </main>
@@ -226,8 +478,9 @@ export async function GET() {
       <p>Powered by SOCS4AI</p>
     </footer>
   </div>
+  ${loginModal}
   
-  <script src="/search.js"></script>
+  ${scriptTag}
 </body>
 </html>
   `

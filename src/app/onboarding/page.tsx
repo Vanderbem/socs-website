@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
@@ -9,14 +9,22 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [isTeacher, setIsTeacher] = useState<boolean | null>(null)
   const [gradeLevel, setGradeLevel] = useState('')
-  const [school, setSchool] = useState('')
+  const [district, setDistrict] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const hasCompletedOnboarding = Boolean(user?.unsafeMetadata?.onboardingCompleted)
 
-  // Redirect users who have already completed onboarding
-  if (isLoaded && user && user.unsafeMetadata?.onboardingCompleted) {
-    router.push('/')
-    return null
-  }
+  useEffect(() => {
+    if (!isLoaded) return
+
+    if (!user) {
+      router.replace('/sign-up')
+      return
+    }
+
+    if (hasCompletedOnboarding) {
+      router.replace('/')
+    }
+  }, [hasCompletedOnboarding, isLoaded, router, user])
 
   // Don't render until Clerk is loaded
   if (!isLoaded) {
@@ -27,10 +35,12 @@ export default function OnboardingPage() {
     )
   }
 
-  // If no user, redirect to sign up
-  if (!user) {
-    router.push('/sign-up')
-    return null
+  if (!user || hasCompletedOnboarding) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+        <p>Redirecting...</p>
+      </div>
+    )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,26 +50,29 @@ export default function OnboardingPage() {
     setIsSubmitting(true)
 
     try {
-      // Update user metadata in Clerk
+      const response = await fetch('/api/track/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isTeacher,
+          gradeLevel: isTeacher ? gradeLevel : null,
+          district: isTeacher ? district : null,
+        })
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || 'Unable to save onboarding information')
+      }
+
+      // Update user metadata in Clerk after the database write succeeds
       await user.update({
         unsafeMetadata: {
           isTeacher,
           gradeLevel: isTeacher ? gradeLevel : null,
-          school: isTeacher ? school : null,
+          district: isTeacher ? district : null,
           onboardingCompleted: true,
         }
-      })
-
-      // Track the onboarding completion
-      await fetch('/api/track/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          isTeacher,
-          gradeLevel,
-          school,
-        })
       })
 
       router.push('/')
@@ -136,23 +149,19 @@ export default function OnboardingPage() {
                   <option value="3">3rd Grade</option>
                   <option value="4">4th Grade</option>
                   <option value="5">5th Grade</option>
-                  <option value="K-2">K-2 Multiple</option>
-                  <option value="3-5">3-5 Multiple</option>
-                  <option value="K-5">K-5 All Elementary</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
-                <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                  School Name (Optional)
+                <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-2">
+                  School District (Optional)
                 </label>
                 <input
                   type="text"
-                  id="school"
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  placeholder="Enter your school name"
+                  id="district"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="Enter your school district"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ClerkProvider, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 
 const inter = Inter({
@@ -24,14 +24,7 @@ export default function RootLayout({
         <body
           className={`${inter.variable} font-sans antialiased`}
         >
-          <ClerkLoaded>
-            {children}
-          </ClerkLoaded>
-          <ClerkLoading>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#fff' }}>
-              <p style={{ color: '#000' }}>Loading Application...</p>
-            </div>
-          </ClerkLoading>
+          {children}
         </body>
       </html>
     </ClerkProvider>

@@ -5,16 +5,6 @@ const nextConfig = {
   poweredByHeader: false,
   optimizeFonts: true,
   
-  // Simple webpack optimization
-  webpack: (config, { dev }) => {
-    if (!dev) {
-      config.optimization.splitChunks = {
-        chunks: 'all'
-      };
-    }
-    return config;
-  },
-  
   // Basic headers for caching and security
   async headers() {
     return [
