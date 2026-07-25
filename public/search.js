@@ -487,15 +487,13 @@ function initializeSearch() {
 }
 
 // --- LESSON ACCESS LOGIC ---
-async function getFreshClerkToken() {
+async function getClerkTokenSafe() {
   try {
     if (window.Clerk && window.Clerk.session) {
-      const tokenPromise = window.Clerk.session.getToken();
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
-      return await Promise.race([tokenPromise, timeoutPromise]);
+      return await window.Clerk.session.getToken();
     }
   } catch (err) {
-    console.warn('[Tracking Warning]: Could not fetch session token:', err);
+    console.warn('Token fetch warning:', err);
   }
   return null;
 }
@@ -520,7 +518,7 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
  
     // 1. Prepare headers
     const headers = { 'Content-Type': 'application/json' };
-    const token = await getFreshClerkToken();
+    const token = await getClerkTokenSafe();
 
     // 2. check fresh Bearer token from Clerk 
     if (token) {
