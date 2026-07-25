@@ -525,6 +525,7 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
       method: 'POST',
       // old --> credentials: 'same-origin',
       // new
+      keepalive: true,
       credentials: 'include', // Ensure cookies are sent for session-based auth
       // old --> headers: { 'Content-Type': 'application/json' },
       // new
