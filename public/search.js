@@ -487,66 +487,67 @@ function initializeSearch() {
 }
 
 // --- LESSON ACCESS LOGIC ---
+async function getFreshClerkToken() {
+  try {
+    if (window.Clerk && window.Clerk.session) {
+      // Clerk's SDK internally manages expiration and token refreshes safely
+      return await window.Clerk.session.getToken();
+    }
+  } catch (err) {
+    console.warn('Unable to retrieve active Clerk session token:', err);
+  }
+  return null;
+}
 
-async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = false) {
+// not async so it runs synchronously when the button is clicked without blocking
+function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = false) {
   if (!lessonUrl || lessonUrl.trim() === '') {
     alert('No link available for this item');
     return;
   }
 
-  const lessonWindow = window.open('about:blank', '_blank');
+  // 1. Open destination immediately so pop-up blockers don't trigger
+  const lessonWindow = window.open(lessonUrl, '_blank', 'noopener,noreferrer');
 
   if (!lessonWindow) {
     alert('Please allow pop-ups to open lesson links.');
     return;
   }
 
-  lessonWindow.opener = null;
+  // 2. Background tracking execution
+  (async () => {
+    try {
+      const token = await getFreshClerkToken();
+      const headers = { 'Content-Type': 'application/json' };
 
-  try {
-    // start new
-    // 1. Prepare headers
-    const headers = { 'Content-Type': 'application/json' };
-
-    // 2. Fetch a fresh Bearer token from Clerk if available on window
-    if (window.Clerk && window.Clerk.session) {
-      try {
-        const token = await window.Clerk.session.getToken();
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-      } catch (tokenErr) {
-        console.warn('Could not retrieve Clerk token, falling back to cookies:', tokenErr);
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    }
-    // 3. code below is sending traxcking request with authorization header 
-    // end new
-    const response = await fetch('/api/track/lesson-access', {
-      method: 'POST',
-      // old --> credentials: 'same-origin',
-      // new
-      keepalive: true,
-      credentials: 'include', // Ensure cookies are sent for session-based auth
-      // old --> headers: { 'Content-Type': 'application/json' },
-      // new
-      headers: headers,
-      body: JSON.stringify({
-        lessonId,
-        lessonUrl,
-        isSpanish,
-      }),
-    });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      console.error('Lesson access was not logged:', response.status, errorBody);
+      const response = await fetch('/api/track/lesson-access', {
+        method: 'POST',
+        keepalive: true,
+        credentials: 'include',
+        headers: headers,
+        body: JSON.stringify({
+          lessonId,
+          lessonUrl,
+          isSpanish,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Tracking Error ${response.status}]:`, errorText);
+      } else {
+        console.log(`[Tracking Success]: Logged access for "${lessonTitle}"`);
+      }
+    } catch (error) {
+      console.error(`[Tracking Network Error]: Failed to log "${lessonTitle}":`, error);
     }
-  } catch (error) {
-    console.error(`Failed to track lesson access for ${lessonTitle}:`, error);
-  } finally {
-    lessonWindow.location.href = lessonUrl;
-  }
+  })();
 }
+
 
 // Expose handleLessonClick to the global scope so inline `onclick` attributes can find it
 window.handleLessonClick = handleLessonClick;
