@@ -504,10 +504,31 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
   lessonWindow.opener = null;
 
   try {
+    // start new
+    // 1. Prepare headers
+    const headers = { 'Content-Type': 'application/json' };
+
+    // 2. Fetch a fresh Bearer token from Clerk if available on window
+    if (window.Clerk && window.Clerk.session) {
+      try {
+        const token = await window.Clerk.session.getToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (tokenErr) {
+        console.warn('Could not retrieve Clerk token, falling back to cookies:', tokenErr);
+      }
+    }
+    // 3. code below is sending traxcking request with authorization header 
+    // end new
     const response = await fetch('/api/track/lesson-access', {
       method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      // old --> credentials: 'same-origin',
+      // new
+      credentials: 'include', // Ensure cookies are sent for session-based auth
+      // old --> headers: { 'Content-Type': 'application/json' },
+      // new
+      headers: headers,
       body: JSON.stringify({
         lessonId,
         lessonUrl,
@@ -517,7 +538,7 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      console.error('Lesson access was not logged:', errorBody);
+      console.error('Lesson access was not logged:', response.status, errorBody);
     }
   } catch (error) {
     console.error(`Failed to track lesson access for ${lessonTitle}:`, error);

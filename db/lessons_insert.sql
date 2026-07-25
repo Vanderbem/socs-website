@@ -1,3 +1,4 @@
+BEGIN;
 INSERT INTO lessons (
   id,
   title,
@@ -1758,7 +1759,7 @@ INSERT INTO lessons (
     ARRAY['ELA']::lesson_subject[],
     ARRAY['Decomposition']::ct_concept[],
     'https://drive.google.com/drive/folders/1mhIE4_R5CxMuwNKrjmDC9n3jIfR5TtEW',
-    NULL,
+    'https://docs.google.com/document/d/1aGVDzeCsEhb3xf3UREXk8p9lZqPm5QtlFIOjHqOGKhM/edit?tab=t.0',
     'https://drive.google.com/drive/folders/1b-B30SvHml6XCeqXLLMku-eeU58YxQoG',
     'https://docs.google.com/document/d/1yRNCrgFp_7hxFlgpyQO4ZiE9S9HEyjeD89yo7ncope8/edit'
   ),
@@ -2781,3 +2782,5 @@ ON CONFLICT (id) DO UPDATE SET
   spanish_folder = EXCLUDED.spanish_folder,
   spanish_lesson = EXCLUDED.spanish_lesson,
   updated_at = now();
+
+  COMMIT;
