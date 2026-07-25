@@ -490,11 +490,12 @@ function initializeSearch() {
 async function getFreshClerkToken() {
   try {
     if (window.Clerk && window.Clerk.session) {
-      // Clerk's SDK internally manages expiration and token refreshes safely
-      return await window.Clerk.session.getToken();
+      const tokenPromise = window.Clerk.session.getToken();
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
+      return await Promise.race([tokenPromise, timeoutPromise]);
     }
   } catch (err) {
-    console.warn('Unable to retrieve active Clerk session token:', err);
+    console.warn('[Tracking Warning]: Could not fetch session token:', err);
   }
   return null;
 }
@@ -505,20 +506,21 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
     return;
   }
 
-  const lessonWindow = window.open('about:blank', '_blank');
-
-  if (!lessonWindow) {
+  //const lessonWindow = window.open('about:blank', '_blank');
+  /* if (!lessonWindow) {
     alert('Please allow pop-ups to open lesson links.');
     return;
   }
-
-  lessonWindow.opener = null;
+  //lessonWindow.opener = null;  
+  */
+  window.open(lessonUrl, '_blank');  
 
   try {
     // start new
-    const token = await getFreshClerkToken();
+ 
     // 1. Prepare headers
     const headers = { 'Content-Type': 'application/json' };
+    const token = await getFreshClerkToken();
 
     // 2. check fresh Bearer token from Clerk 
     if (token) {
@@ -550,9 +552,9 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
     }
   } catch (error) {
     console.error(`Failed to track lesson access for ${lessonTitle}:`, error);
-  } finally {
-    lessonWindow.location.href = lessonUrl;
-  }
+  }// finally {
+   // lessonWindow.location.href = lessonUrl;
+  //}
 }
 
 // Expose handleLessonClick to the global scope so inline `onclick` attributes can find it
