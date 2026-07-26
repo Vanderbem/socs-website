@@ -1,4 +1,5 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth} from '@clerk/nextjs/server';
+import { verifyToken } from '@clerk/backend';
 import { eq, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
@@ -19,20 +20,20 @@ export async function POST(request: Request) {
 
   // 2. Fallback: Parse Bearer Token directly from headers if auth() was null
   if (!userId) {
-    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const client = await clerkClient();
-        // Verify session or decode token from Clerk
-        const verifiedToken = await client.verifyToken(token);
-        userId = verifiedToken.sub; // 'sub' is the Clerk userId
-      } catch (err) {
-        console.error('[Tracking API] Token verification failed:', err);
+      const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          // standalone verifyToken method from @clerk/backend
+          const verifiedToken = await verifyToken(token, {
+            secretKey: process.env.CLERK_SECRET_KEY,
+          });
+          userId = verifiedToken.sub; // 'sub' contains the Clerk userId
+        } catch (err) {
+          console.error('[Tracking API] Token verification failed:', err);
+        }
       }
     }
-  }
-
   // 3. Reject only if both standard auth AND token verification failed
   if (!userId) {
     console.error('[Tracking API] Unauthorized request: missing or invalid session/token');
