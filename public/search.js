@@ -487,13 +487,19 @@ function initializeSearch() {
 }
 
 // --- LESSON ACCESS LOGIC ---
-async function getClerkTokenSafe() {
+async function getFreshClerkTokenSafe() {
   try {
     if (window.Clerk && window.Clerk.session) {
-      return await window.Clerk.session.getToken();
+      // Wrap in a strict 1-second race timeout so a hung Clerk Promise never locks execution
+      const tokenPromise = window.Clerk.session.getToken({ skipCache: true });
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
+      
+      const token = await Promise.race([tokenPromise, timeoutPromise]);
+      return token || null;
     }
   } catch (err) {
-    console.warn('Token fetch warning:', err);
+    // Soft log without throwing — prevents SDK state poisoning from blocking future clicks
+    console.warn('[Tracking] Session token temporarily unavailable:', err);
   }
   return null;
 }
@@ -518,7 +524,7 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
  
     // 1. Prepare headers
     const headers = { 'Content-Type': 'application/json' };
-    const token = await getClerkTokenSafe();
+    const token = await getFreshClerkTokenSafe();
 
     // 2. check fresh Bearer token from Clerk 
     if (token) {

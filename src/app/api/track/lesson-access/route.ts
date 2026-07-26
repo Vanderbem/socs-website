@@ -6,6 +6,11 @@ import { db } from '@/lib/db';
 import { upsertTeacherFromClerk } from '@/lib/db/teachers';
 import { accessLogs, lessons } from '@/lib/db/schema';
 
+async function getAnonymousTeacherId(): Promise<string> {
+  const ANONYMOUS_CLERK_ID = 'anonymous_system_user';
+  const teacher = await upsertTeacherFromClerk(ANONYMOUS_CLERK_ID);
+  return teacher.id; // Returns UUID string
+}
 export async function POST(request: Request) {
 
   let userId: string | null = null;
@@ -34,14 +39,15 @@ export async function POST(request: Request) {
         }
       }
     }
+  // don't reject - allow for logging with NULL userID
   // 3. Reject only if both standard auth AND token verification failed
-  if (!userId) {
+  /*if (!userId) {
     console.error('[Tracking API] Unauthorized request: missing or invalid session/token');
     return NextResponse.json(
       { error: 'Unauthorized. Valid Clerk session required.' },
       { status: 401 }
     );
-  }
+  }*/
 
   try {
     const body = await request.json();
@@ -80,11 +86,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lesson not found', lessonId, lessonUrl }, { status: 404 });
     }
 
-    const teacher = await upsertTeacherFromClerk(userId);
+    //const teacher = await upsertTeacherFromClerk(userId);
+    // log all access even if userID is null, but only if lesson exists
+    let teacherId: string;
+    if (userId) {
+      const teacher = await upsertTeacherFromClerk(userId);
+      teacherId = teacher.id;
+    } else {
+      teacherId = await getAnonymousTeacherId();
+    }
     const [accessLog] = await db
       .insert(accessLogs)
       .values({
-        teacherId: teacher.id,
+        teacherId: teacherId,
         lessonId: lesson.id,
         isSpanish,
       })
