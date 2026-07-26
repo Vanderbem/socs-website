@@ -6,10 +6,40 @@ import { upsertTeacherFromClerk } from '@/lib/db/teachers';
 import { accessLogs, lessons } from '@/lib/db/schema';
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
 
+  let userId: string | null = null;
+
+  // 1. Try standard Clerk auth()
+  try {
+    const authObj = await auth();
+    userId = authObj.userId;
+  } catch (e) {
+    console.warn('[Tracking API] Standard auth() failed, trying Bearer fallback');
+  }
+
+  // 2. Fallback: Parse Bearer Token directly from headers if auth() was null
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const client = await clerkClient();
+        // Verify session or decode token from Clerk
+        const verifiedToken = await client.verifyToken(token);
+        userId = verifiedToken.sub; // 'sub' is the Clerk userId
+      } catch (err) {
+        console.error('[Tracking API] Token verification failed:', err);
+      }
+    }
+  }
+
+  // 3. Reject only if both standard auth AND token verification failed
+  if (!userId) {
+    console.error('[Tracking API] Unauthorized request: missing or invalid session/token');
+    return NextResponse.json(
+      { error: 'Unauthorized. Valid Clerk session required.' },
+      { status: 401 }
+    );
   }
 
   try {
