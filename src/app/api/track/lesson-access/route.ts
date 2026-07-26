@@ -47,17 +47,16 @@ export async function POST(request: Request) {
 
     //const teacher = await upsertTeacherFromClerk(userId);
     // log all access even if userID is null, but only if lesson exists
-    let teacherId: string;
+    let teacherDBId: string | null = null;
     if (userId) {
       const teacher = await upsertTeacherFromClerk(userId);
-      teacherId = teacher.id;
-    } else {
-      teacherId = await getAnonymousTeacherId();
-    }
+      teacherDBId = teacher.id;
+    } 
+    // log access with teacherDBId (can be null) and lesson.id
     const [accessLog] = await db
       .insert(accessLogs)
       .values({
-        teacherId: teacherId,
+        teacherId: teacherDBId,
         lessonId: lesson.id,
         isSpanish,
       })
