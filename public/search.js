@@ -487,22 +487,6 @@ function initializeSearch() {
 }
 
 // --- LESSON ACCESS LOGIC ---
-async function getFreshClerkTokenSafe() {
-  try {
-    if (window.Clerk && window.Clerk.session) {
-      // Wrap in a strict 1-second race timeout so a hung Clerk Promise never locks execution
-      const tokenPromise = window.Clerk.session.getToken({ skipCache: true });
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
-      
-      const token = await Promise.race([tokenPromise, timeoutPromise]);
-      return token || null;
-    }
-  } catch (err) {
-    // Soft log without throwing — prevents SDK state poisoning from blocking future clicks
-    console.warn('[Tracking] Session token temporarily unavailable:', err);
-  }
-  return null;
-}
 
 async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = false) {
   if (!lessonUrl || lessonUrl.trim() === '') {
@@ -510,37 +494,18 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
     return;
   }
 
-  //const lessonWindow = window.open('about:blank', '_blank');
-  /* if (!lessonWindow) {
-    alert('Please allow pop-ups to open lesson links.');
-    return;
-  }
-  //lessonWindow.opener = null;  
-  */
-  window.open(lessonUrl, '_blank');  
+  // 1. Open lesson link immediately
+  window.open(lessonUrl, '_blank');
 
+  // 2. Track access in background relying purely on Clerk's session cookie
   try {
-    // start new
- 
-    // 1. Prepare headers
-    const headers = { 'Content-Type': 'application/json' };
-    const token = await getFreshClerkTokenSafe();
-
-    // 2. check fresh Bearer token from Clerk 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    // 3. code below is sending traxcking request with authorization header 
-    // end new
-    const response = await fetch('/api/track/lesson-access', {
+    await fetch('/api/track/lesson-access', {
       method: 'POST',
-      // old --> credentials: 'same-origin', //relies on cached cookies
-      // new --> guarantees the browser finishes transmitting the analytics payload regardless of rapid tab opening or page redirection
       keepalive: true,
-      credentials: 'include', // Ensure cookies are sent for session-based auth
-      // old --> headers: { 'Content-Type': 'application/json' },
-      // new
-      headers: headers,
+      credentials: 'include', // Sends Clerk's long-term session cookie
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         lessonId,
         lessonUrl,
@@ -555,13 +520,10 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
       console.log(`[Tracking Success]: Logged access for "${lessonTitle}"`);
     }
   } catch (error) {
-    console.error(`Failed to track lesson access for ${lessonTitle}:`, error);
-  }// finally {
-   // lessonWindow.location.href = lessonUrl;
-  //}
+    console.warn('[Tracking] Background fetch skipped:', error);
+  }
 }
 
-// Expose handleLessonClick to the global scope so inline `onclick` attributes can find it
 window.handleLessonClick = handleLessonClick;
 
 // --- PROFILE LOGIC ---

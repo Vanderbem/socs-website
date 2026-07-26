@@ -1,55 +1,14 @@
 import { auth} from '@clerk/nextjs/server';
-import { verifyToken } from '@clerk/backend';
 import { eq, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { upsertTeacherFromClerk } from '@/lib/db/teachers';
 import { accessLogs, lessons } from '@/lib/db/schema';
 
-async function getAnonymousTeacherId(): Promise<string> {
-  const ANONYMOUS_CLERK_ID = 'anonymous_system_user';
-  const teacher = await upsertTeacherFromClerk(ANONYMOUS_CLERK_ID);
-  return teacher.id; // Returns UUID string
-}
+
 export async function POST(request: Request) {
-
-  let userId: string | null = null;
-
-  // 1. Try standard Clerk auth()
   try {
-    const authObj = await auth();
-    userId = authObj.userId;
-  } catch (e) {
-    console.warn('[Tracking API] Standard auth() failed, trying Bearer fallback');
-  }
-
-  // 2. Fallback: Parse Bearer Token directly from headers if auth() was null
-  if (!userId) {
-      const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        try {
-          // standalone verifyToken method from @clerk/backend
-          const verifiedToken = await verifyToken(token, {
-            secretKey: process.env.CLERK_SECRET_KEY,
-          });
-          userId = verifiedToken.sub; // 'sub' contains the Clerk userId
-        } catch (err) {
-          console.error('[Tracking API] Token verification failed:', err);
-        }
-      }
-    }
-  // don't reject - allow for logging with NULL userID
-  // 3. Reject only if both standard auth AND token verification failed
-  /*if (!userId) {
-    console.error('[Tracking API] Unauthorized request: missing or invalid session/token');
-    return NextResponse.json(
-      { error: 'Unauthorized. Valid Clerk session required.' },
-      { status: 401 }
-    );
-  }*/
-
-  try {
+    const { userId } = await auth();
     const body = await request.json();
     const lessonId = Number(body.lessonId);
     const lessonUrl = typeof body.lessonUrl === 'string' ? body.lessonUrl.trim() : '';
