@@ -195,7 +195,7 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <span className="text-xl font-bold text-white">SOCS4AI</span>
+                <span className="text-xl font-bold text-white">SOCS4ALL</span>
               </div>
               <p className="text-gray-400">
                 Empowering educators with computational thinking resources.
@@ -226,7 +226,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 SOCS4AI. All rights reserved.</p>
+            <p>&copy; 2024 SOCS4ALL. All rights reserved.</p>
           </div>
         </div>
       </footer>

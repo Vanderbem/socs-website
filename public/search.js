@@ -278,6 +278,7 @@ function updateSpanishFacetCount() {
         <span class="facet-count">${count}</span>
       </label>
     </li>
+    <p> Spanish lessons were translated automatically using Google Translate. Please review them for accuracy before using them in your classroom. </p>
   `;
 }
 

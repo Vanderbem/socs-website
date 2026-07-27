@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SOCS4AI - Computational Thinking Lessons",
+  title: "SOCS4ALL - Computational Thinking Lessons",
   description: "A collection of CT lesson plans to integrate computational thinking into K-5 classrooms.",
 };
 

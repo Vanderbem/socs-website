@@ -40,7 +40,7 @@ export default function SearchPage() {
     <div className="instant-search-container">
       {/* Static HTML structure - no dynamic content */}
       <header>
-        <a href="/"><img src="/images/instant_search_logo@2x.png" alt="SOCS4AI Lesson Search" /></a>
+        <a href="/"><img src="/images/instant_search_logo@2x.png" alt="SOCS4ALL Lesson Search" /></a>
         <div id="search-input-container">
           <form action="" role="search">
             <input
@@ -100,7 +100,7 @@ export default function SearchPage() {
       </main>
 
       <footer>
-        <p>Powered by SOCS4AI</p>
+        <p>Powered by SOCS4ALL</p>
       </footer>
     </div>
   )

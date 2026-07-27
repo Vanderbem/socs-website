@@ -87,7 +87,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SOCS4AI!</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SOCS4ALL!</h1>
         <p className="text-gray-600 mb-6">
           Let's personalize your experience. This helps us understand who uses our platform.
         </p>

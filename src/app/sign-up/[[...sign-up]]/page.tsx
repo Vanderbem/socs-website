@@ -9,7 +9,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
         <SignUp.Root fallback={<p className="text-center text-gray-600">Loading sign up...</p>}>
           <SignUp.Step name="start">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Join SOCS4AI</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Join SOCS4ALL</h1>
             <p className="text-gray-600 mb-6">Use Google to access lesson plans.</p>
 
             <Clerk.GlobalError className="text-red-600 text-sm mb-4" />

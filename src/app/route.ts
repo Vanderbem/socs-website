@@ -25,7 +25,7 @@ export async function GET() {
     <div id="login-required-modal" class="modal-overlay auth-required-overlay" aria-hidden="false">
       <div class="modal-content auth-required-modal">
         <h2>Sign in to view lessons</h2>
-        <p>Use Google to access the SOCS4AI lesson search and lesson materials.</p>
+        <p>Use Google to access the SOCS4ALL lesson search and lesson materials.</p>
         <div class="modal-buttons">
           <a href="/sign-in" class="btn-submit auth-google-button">Continue with Google</a>
         </div>
@@ -39,7 +39,7 @@ export async function GET() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SOCS4AI Lesson Search</title>
+  <title>SOCS4ALL Lesson Search</title>
   <link rel="stylesheet" href="/search/style.css">
   <link rel="stylesheet" href="/search/custom-overrides.css">
   <style>
@@ -294,9 +294,7 @@ export async function GET() {
           />
         </form>
       </div>
-      <div id="search-note" style="margin-left:1rem;align-self:center;font-size:0.95rem;color:#555;">
-        Lessons available are continually being updated and revised.
-        Spanish translations currently under review. 
+      <div id="search-note" style="margin-left:1rem;align-self:center;font-size:0.95rem;color:#555;">  
         <div class="header-actions">
           ${profileButton}
           <button type="button" id="open-feedback-modal" class="feedback-button">Submit lesson feedback</button>
@@ -347,7 +345,7 @@ export async function GET() {
     <div id="profile-modal" class="modal-overlay" aria-hidden="true">
       <div class="modal-content">
         <h2>Profile</h2>
-        <p>Update the grade and district saved with your SOCS4AI account.</p>
+        <p>Update the grade and district saved with your SOCS4ALL account.</p>
         <form id="profile-form">
           <div class="form-group">
             <label for="profile-email">Email</label>
@@ -475,7 +473,8 @@ export async function GET() {
     </main>
 
     <footer>
-      <p>Powered by SOCS4AI</p>
+      <p>Powered by SOCS4ALL</p>
+      <p><a href="https://socs4all.sou.edu/privacy-policy/" target="_blank">Privacy Policy</a></p>
     </footer>
   </div>
   ${loginModal}
