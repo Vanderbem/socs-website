@@ -176,9 +176,9 @@ export default function OnboardingPage() {
             {isSubmitting ? 'Saving...' : 'Complete Profile'}
           </button>
 
-          <p className="text-xs text-gray-500 text-center">
+          {/* <p className="text-xs text-gray-500 text-center">
             You can update this information anytime in your profile settings.
-          </p>
+          </p> */}
         </form>
       </div>
     </div>

@@ -154,6 +154,61 @@ export async function GET() {
     .profile-button:hover {
       background-color: #1f2937;
     }
+    .resources-dropdown {
+      position: relative;
+      margin-top: 0.75rem;
+    }
+    .resources-dropdown summary {
+      list-style: none;
+      padding: 0.6rem 1rem;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      background-color: #374151;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+      user-select: none;
+    }
+    .resources-dropdown summary:hover {
+      background-color: #1f2937;
+      border-color: #1f2937;
+    }
+    .resources-dropdown summary::-webkit-details-marker {
+      display: none;
+    }
+    .resources-dropdown summary::after {
+      content: '▾';
+      margin-left: 0.45rem;
+      font-size: 0.8rem;
+    }
+    .resources-dropdown[open] summary::after {
+      content: '▴';
+    }
+    .resources-menu {
+      position: absolute;
+      top: calc(100% + 0.35rem);
+      right: 0;
+      min-width: 190px;
+      padding: 0.35rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background-color: #fff;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+      z-index: 20;
+    }
+    .resources-menu a {
+      display: block;
+      padding: 0.55rem 0.65rem;
+      border-radius: 4px;
+      color: #333;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .resources-menu a:hover,
+    .resources-menu a:focus {
+      background-color: #f2f6ff;
+      outline: none;
+    }
     .feedback-lesson-results {
       margin-top: 0.5rem;
       border: 1px solid #ddd;
@@ -283,7 +338,7 @@ export async function GET() {
   <div class="${shellClass}">
     <header>
       <div class="header-left">
-        <a href="/"><img src="/socs-wordmark.png" alt="SOCS For All" style="height: 50px;" /></a>
+        <a href="https://socs4all.sou.edu/"><img src="/socs-wordmark.png" alt="SOCS For All" style="height: 50px;" /></a>
         <div id="search-input-container">
         <form action="" role="search">
           <input
@@ -296,8 +351,17 @@ export async function GET() {
       </div>
       <div id="search-note" style="margin-left:1rem;align-self:center;font-size:0.95rem;color:#555;">  
         <div class="header-actions">
-          ${profileButton}
+          <!-- ${profileButton} -->
           <button type="button" id="open-feedback-modal" class="feedback-button">Submit lesson feedback</button>
+          <details class="resources-dropdown">
+            <summary>Resources</summary>
+            <div class="resources-menu">
+              <a href="https://docs.google.com/spreadsheets/d/18i0aeX2n4EPF7jr4hrkbEr3O2lekZhUSaPB-MSWuCI0/edit?gid=2068766847#gid=2068766847" target="_blank" rel="noopener noreferrer">CT Rubrics</a>
+              <a href="https://drive.google.com/drive/u/0/folders/1UQYcl6LAMfvZ62Zr429KVDkjYUsByHhu" target="_blank" rel="noopener noreferrer">CT Standards</a>
+              <a href="https://drive.google.com/drive/folders/1pozIGD7oy7NYTn8Gs-gxehcwGPu8kDSR?usp=sharing" target="_blank" rel="noopener noreferrer">CT Introductions</a>
+              <a href="https://drive.google.com/drive/folders/1zVKdZ7ow5JrRKhnXb-Jl-4VGch1azaJQ" target="_blank" rel="noopener noreferrer">CT Posters</a>
+            </div>
+          </details>
         </div>
       </div>
       </div>
@@ -473,7 +537,7 @@ export async function GET() {
     </main>
 
     <footer>
-      <p>Powered by SOCS4ALL</p>
+      <p>Powered by <a href="https://socs4all.sou.edu/" target="_blank">SOCS4ALL</a></p>
       <p><a href="https://socs4all.sou.edu/privacy-policy/" target="_blank">Privacy Policy</a></p>
     </footer>
   </div>
