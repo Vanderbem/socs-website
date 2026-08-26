@@ -636,9 +636,8 @@ function initializeProfileModal() {
   document.getElementById('profile-form')?.addEventListener('submit', saveProfile);
 }
 
-// --- FEEDBACK DRAFT LOGIC ---
+// --- FEEDBACK EMAIL LOGIC ---
 
-const FEEDBACK_RECIPIENT = 'vanderbem@sou.edu';
 let selectedFeedbackLesson = null;
 
 function escapeHtml(value) {
@@ -654,39 +653,6 @@ function getFeedbackText() {
   return document.getElementById('feedback-text')?.value.trim() || '';
 }
 
-function formatFeedbackDraft() {
-  const feedbackText = getFeedbackText();
-  const lessonTitle = selectedFeedbackLesson?.lessonTitle?.trim();
-  const lessonLink = selectedFeedbackLesson?.linkToFolder?.trim();
-  const subject = lessonTitle
-    ? `SOCS lesson feedback: ${lessonTitle}`
-    : 'SOCS lesson feedback';
-
-  const lines = [
-    `To: ${FEEDBACK_RECIPIENT}`,
-    `Subject: ${subject}`,
-    '',
-    'Feedback:',
-    feedbackText || '[Enter feedback here]',
-  ];
-
-  if (lessonTitle || lessonLink) {
-    lines.push('', 'Lesson:');
-    if (lessonTitle) lines.push(`Title: ${lessonTitle}`);
-    if (lessonLink) lines.push(`Link: ${lessonLink}`);
-  }
-
-  lines.push('', `Submitted from: ${window.location.href}`);
-
-  return lines.join('\n');
-}
-
-function updateFeedbackPreview() {
-  const preview = document.getElementById('feedback-preview');
-  if (!preview) return;
-  preview.textContent = formatFeedbackDraft();
-}
-
 function setFeedbackStatus(message, isError = false) {
   const status = document.getElementById('feedback-status');
   if (!status) return;
@@ -698,12 +664,22 @@ function clearFeedbackStatusSoon() {
   window.setTimeout(() => setFeedbackStatus(''), 2500);
 }
 
+function setFeedbackFormDisabled(isDisabled) {
+  const form = document.getElementById('feedback-form');
+  if (!form) return;
+
+  form.querySelectorAll('textarea, input, button').forEach((field) => {
+    if (field.id === 'cancel-feedback-button') return;
+    field.disabled = isDisabled;
+  });
+}
+
 function openFeedbackModal() {
   const modal = document.getElementById('feedback-modal');
   if (!modal) return;
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
-  updateFeedbackPreview();
+  setFeedbackStatus('');
   document.getElementById('feedback-text')?.focus();
 }
 
@@ -730,7 +706,7 @@ function closeFeedbackModal() {
   }
   selectedFeedbackLesson = null;
   setFeedbackStatus('');
-  updateFeedbackPreview();
+  setFeedbackFormDisabled(false);
 }
 
 function renderSelectedFeedbackLesson() {
@@ -740,7 +716,6 @@ function renderSelectedFeedbackLesson() {
   if (!selectedFeedbackLesson) {
     selectedLesson.innerHTML = '';
     selectedLesson.style.display = 'none';
-    updateFeedbackPreview();
     return;
   }
 
@@ -749,7 +724,6 @@ function renderSelectedFeedbackLesson() {
     <span>${escapeHtml(selectedFeedbackLesson.linkToFolder)}</span>
   `;
   selectedLesson.style.display = 'block';
-  updateFeedbackPreview();
 }
 
 function selectFeedbackLesson(lessonIndex) {
@@ -798,44 +772,44 @@ function renderFeedbackLessonResults(query) {
   results.style.display = 'block';
 }
 
-function downloadFeedbackDraft() {
-  const draft = formatFeedbackDraft();
-  const today = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([draft], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+async function sendFeedback() {
+  const feedbackText = getFeedbackText();
+  const lessonTitle = selectedFeedbackLesson?.lessonTitle || null;
+  const lessonLink = selectedFeedbackLesson?.linkToFolder || null;
 
-  link.href = url;
-  link.download = `socs-lesson-feedback-${today}.txt`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+  if (!feedbackText) {
+    setFeedbackStatus('Please enter feedback before sending.', true);
+    return;
+  }
 
-async function copyFeedbackDraft() {
-  const draft = formatFeedbackDraft();
+  setFeedbackStatus('Sending feedback...');
+  setFeedbackFormDisabled(true);
 
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(draft);
-    } else {
-      const tempTextArea = document.createElement('textarea');
-      tempTextArea.value = draft;
-      tempTextArea.setAttribute('readonly', '');
-      tempTextArea.style.position = 'fixed';
-      tempTextArea.style.left = '-9999px';
-      document.body.appendChild(tempTextArea);
-      tempTextArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(tempTextArea);
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        feedbackText,
+        lessonTitle,
+        lessonLink,
+        pageUrl: window.location.href,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Unable to send feedback');
     }
 
-    setFeedbackStatus('Draft copied.');
-    clearFeedbackStatusSoon();
+    setFeedbackStatus('Feedback sent.');
+    window.setTimeout(closeFeedbackModal, 1000);
   } catch (error) {
-    console.error('Failed to copy feedback draft:', error);
-    setFeedbackStatus('Unable to copy draft. Please download it instead.', true);
+    console.error('Failed to send feedback:', error);
+    setFeedbackStatus(error.message || 'Unable to send feedback.', true);
+  } finally {
+    setFeedbackFormDisabled(false);
   }
 }
 
@@ -843,16 +817,12 @@ function initializeFeedbackModal() {
   const form = document.getElementById('feedback-form');
   const openButton = document.getElementById('open-feedback-modal');
   const cancelButton = document.getElementById('cancel-feedback-button');
-  const copyButton = document.getElementById('copy-feedback-button');
   const includeLessonToggle = document.getElementById('include-lesson-toggle');
   const lessonSearch = document.getElementById('feedback-lesson-search');
   const lessonResults = document.getElementById('feedback-lesson-results');
-  const feedbackText = document.getElementById('feedback-text');
 
   openButton?.addEventListener('click', openFeedbackModal);
   cancelButton?.addEventListener('click', closeFeedbackModal);
-  copyButton?.addEventListener('click', copyFeedbackDraft);
-  feedbackText?.addEventListener('input', updateFeedbackPreview);
 
   includeLessonToggle?.addEventListener('change', (event) => {
     const lessonGroup = document.getElementById('feedback-lesson-group');
@@ -886,18 +856,8 @@ function initializeFeedbackModal() {
 
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
-
-    if (!getFeedbackText()) {
-      setFeedbackStatus('Please enter feedback before downloading.', true);
-      return;
-    }
-
-    downloadFeedbackDraft();
-    setFeedbackStatus('Draft downloaded.');
-    clearFeedbackStatusSoon();
+    sendFeedback();
   });
-
-  updateFeedbackPreview();
 }
 
 // --- SCRIPT EXECUTION ---

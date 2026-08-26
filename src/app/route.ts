@@ -19,7 +19,7 @@ export async function GET() {
   const shellClass = isSignedIn ? 'instant-search-container' : 'instant-search-container app-shell'
   const resultsCount = isSignedIn ? '' : '0 results'
   const hitsContent = isSignedIn ? '' : '<li class="no-results">Sign in with Google to view lessons.</li>'
-  const scriptTag = isSignedIn ? '<script src="/search.js?v=db-access-6"></script>' : ''
+  const scriptTag = isSignedIn ? '<script src="/search.js?v=feedback-email-1"></script>' : ''
   const profileButton = isSignedIn ? '<button type="button" id="open-profile-modal" class="feedback-button profile-button">Profile</button>' : ''
   const loginModal = isSignedIn ? '' : `
     <div id="login-required-modal" class="modal-overlay auth-required-overlay" aria-hidden="false">
@@ -248,18 +248,6 @@ export async function GET() {
       display: block;
       margin-bottom: 0.25rem;
     }
-    .feedback-preview {
-      min-height: 160px;
-      padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background-color: #f8f8f8;
-      color: #333;
-      font-family: Consolas, Monaco, monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
     .feedback-status {
       min-height: 1.2rem;
       margin-top: 0.75rem;
@@ -448,7 +436,7 @@ export async function GET() {
     <div id="feedback-modal" class="modal-overlay" aria-hidden="true">
       <div class="modal-content">
         <h2>Lesson feedback</h2>
-        <p>Share suggestions for improvements. If the feedback is about a specific lesson, include the lesson title and link.</p>
+        <p>Share suggestions for improvements. If the feedback is about a specific lesson, you can search for that lesson below.</p>
         <form id="feedback-form">
           <div class="form-group">
             <label for="feedback-text">Feedback</label>
@@ -468,15 +456,10 @@ export async function GET() {
           <div class="form-group">
             <div id="feedback-selected-lesson" class="feedback-selected-lesson"></div>
           </div>
-          <div class="form-group">
-            <label for="feedback-preview">Email draft preview</label>
-            <div id="feedback-preview" class="feedback-preview"></div>
-            <div id="feedback-status" class="feedback-status" role="status" aria-live="polite"></div>
-          </div>
+          <div id="feedback-status" class="feedback-status" role="status" aria-live="polite"></div>
           <div class="modal-buttons">
             <button type="button" id="cancel-feedback-button" class="btn-skip">Cancel</button>
-            <button type="button" id="copy-feedback-button" class="btn-skip">Copy Draft</button>
-            <button type="submit" class="btn-submit">Download Draft</button>
+            <button type="submit" id="send-feedback-button" class="btn-submit">Send Feedback</button>
           </div>
         </form>
       </div>
