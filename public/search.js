@@ -498,12 +498,12 @@ async function handleLessonClick(lessonId, lessonUrl, lessonTitle, isSpanish = f
   // 1. Open lesson link immediately
   window.open(lessonUrl, '_blank');
 
-  // 2. Track access in background relying purely on Clerk's session cookie
+  // 2. Track access using Clerk's refreshed same-origin session token.
   try {
-    await fetch('/api/track/lesson-access', {
+    const response = await fetch('/api/track/lesson-access', {
       method: 'POST',
       keepalive: true,
-      credentials: 'include', // Sends Clerk's long-term session cookie
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
