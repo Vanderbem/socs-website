@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
+import Script from 'next/script'
+import { redirect } from 'next/navigation'
 
-export async function GET() {
+export default async function HomePage() {
   const { userId } = await auth()
   const isSignedIn = !!userId
 
@@ -11,15 +12,13 @@ export async function GET() {
     const unsafeMetadata = user.unsafeMetadata as { onboardingCompleted?: boolean } | undefined
 
     if (!unsafeMetadata?.onboardingCompleted) {
-      return NextResponse.redirect(new URL('/onboarding', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'))
+      redirect('/onboarding')
     }
   }
 
-  const bodyClass = isSignedIn ? '' : ' class="signed-out-preview"'
   const shellClass = isSignedIn ? 'instant-search-container' : 'instant-search-container app-shell'
   const resultsCount = isSignedIn ? '' : '0 results'
   const hitsContent = isSignedIn ? '' : '<li class="no-results">Sign in with Google to view lessons.</li>'
-  const scriptTag = isSignedIn ? '<script src="/search.js?v=feedback-email-1"></script>' : ''
   const profileButton = isSignedIn ? '<button type="button" id="open-profile-modal" class="feedback-button profile-button">Profile</button>' : ''
   const loginModal = isSignedIn ? '' : `
     <div id="login-required-modal" class="modal-overlay auth-required-overlay" aria-hidden="false">
@@ -33,15 +32,7 @@ export async function GET() {
     </div>
   `
 
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SOCS4ALL Lesson Search</title>
-  <link rel="stylesheet" href="/search/style.css">
-  <link rel="stylesheet" href="/search/custom-overrides.css">
+  const pageMarkup = `
   <style>
     header {
       display: flex;
@@ -320,9 +311,24 @@ export async function GET() {
       font-size: 1rem;
       transition: background-color 0.2s;
     }
+    /* Preserve the legacy search UI now that this page renders inside Tailwind's root layout. */
+    .lesson-search-page {
+      min-height: 100vh;
+      background-color: #fff;
+      line-height: normal;
+    }
+    .lesson-search-page #sort-select,
+    .lesson-search-page #sort-order-toggle,
+    .lesson-search-page #pagination .page-btn,
+    .lesson-search-page .clear-filters {
+      all: revert;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+    .lesson-search-page #pagination .page-btn:disabled {
+      cursor: not-allowed;
+    }
   </style>
-</head>
-<body${bodyClass}>
   <div class="${shellClass}">
     <header>
       <div class="header-left">
@@ -525,15 +531,17 @@ export async function GET() {
     </footer>
   </div>
   ${loginModal}
-  
-  ${scriptTag}
-</body>
-</html>
   `
-  
-  return new NextResponse(html, {
-    headers: {
-      'Content-Type': 'text/html',
-    },
-  })
+
+  return (
+    <>
+      <link rel="stylesheet" href="/search/style.css" />
+      <link rel="stylesheet" href="/search/custom-overrides.css" />
+      <div
+        className={`lesson-search-page${isSignedIn ? '' : ' signed-out-preview'}`}
+        dangerouslySetInnerHTML={{ __html: pageMarkup }}
+      />
+      {isSignedIn && <Script src="/search.js?v=clerk-session-refresh-1" strategy="afterInteractive" />}
+    </>
+  )
 }

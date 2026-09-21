@@ -1,4 +1,4 @@
-import { auth} from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { eq, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
@@ -9,6 +9,11 @@ import { accessLogs, lessons } from '@/lib/db/schema';
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const lessonId = Number(body.lessonId);
     const lessonUrl = typeof body.lessonUrl === 'string' ? body.lessonUrl.trim() : '';
@@ -45,18 +50,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lesson not found', lessonId, lessonUrl }, { status: 404 });
     }
 
-    //const teacher = await upsertTeacherFromClerk(userId);
-    // log all access even if userID is null, but only if lesson exists
-    let teacherDBId: string | null = null;
-    if (userId) {
-      const teacher = await upsertTeacherFromClerk(userId);
-      teacherDBId = teacher.id;
-    } 
-    // log access with teacherDBId (can be null) and lesson.id
+    const teacher = await upsertTeacherFromClerk(userId);
     const [accessLog] = await db
       .insert(accessLogs)
       .values({
-        teacherId: teacherDBId,
+        teacherId: teacher.id,
         lessonId: lesson.id,
         isSpanish,
       })
